@@ -272,14 +272,12 @@ def respond_to_vacancy():
         }), 303
 
 
-    elif apply_resp.status_code == 403:
-        error_json = apply_resp.json()
-        error_value = error_json.get("errors", [{}])[0].get("value", "")
+
+    elif apply_resp.status_code == 409:
         return jsonify({
-            "error": "⛔ Отклик запрещён",
-            "details": error_json,
-            "reason": error_value  # вот эта строка
-        }), 403
+            "error": "⚠️ Вы уже откликались на эту вакансию",
+            "reason": "already_applied"
+        }), 403  # попал в нужный блок
 
 
 
