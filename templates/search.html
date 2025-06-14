@@ -192,7 +192,7 @@
       console.log("⚠️ Не JSON тело:", e);
     }
 
-    // остальной твой код
+
     if (res.status === 201) {
       status.textContent = "✅ Успешно откликнулись!";
       status.className = "text-sm text-green-600";
@@ -208,11 +208,11 @@
 
       if (reason === "test_required") {
         status.textContent = "📋 Требуется пройти тест перед откликом";
-      } else if (reason === "already_applied") {
-        status.textContent = "⚠️ Вы уже откликались ранее";
       } else {
-        status.textContent = "⛔ Отклик запрещён: резюме не подходит или недоступно";
-      }
+        status.textContent = "⚠️ Вы уже откликались ранее";
+      } //else {
+        //status.textContent = "⛔ Отклик запрещён: резюме не подходит или недоступно";
+      //}
       status.className = "text-sm text-red-600";
 
     } else if (res.status === 400) {
