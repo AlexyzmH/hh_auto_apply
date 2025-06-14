@@ -271,21 +271,16 @@ def respond_to_vacancy():
             "manual_url": vacancy.get("apply_alternate_url")
         }), 303
 
+
     elif apply_resp.status_code == 403:
         error_json = apply_resp.json()
-        error_value = error_json.get("errors", [{}])[0].get("value")
-        if error_value == "test_required":
-            return jsonify({
-
-                "error": "📋 Для этой вакансии нужно сначала пройти тест",
-
-                "description": error_json.get("description", "")
-
-            }), 403
+        error_value = error_json.get("errors", [{}])[0].get("value", "")
         return jsonify({
-            "error": "⛔ Отклик запрещён для этого резюме",
-            "details": error_json
+            "error": "⛔ Отклик запрещён",
+            "details": error_json,
+            "reason": error_value  # вот эта строка
         }), 403
+
 
 
     elif apply_resp.status_code == 400:

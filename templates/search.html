@@ -194,21 +194,21 @@
         <a href="${link}" target="_blank" class="text-blue-600 underline">Открыть на HH</a>`;
       status.className = "text-sm text-yellow-600";
 
-    } else if (res.status === 403) {
-      const errorCode = data?.details?.errors?.[0]?.value || "";
+    }
+    else if (res.status === 403) {
+    const reason = data?.reason || "";
 
-      if (errorCode === "test_required") {
-        status.textContent = "📋 Требуется пройти тест перед откликом";
-      } else {
-        status.textContent = "⛔ Отклик запрещён: резюме не подходит или недоступно";
-      }
-      status.className = "text-sm text-red-600";
+    if (reason === "test_required") {
+      status.textContent = "📋 Требуется пройти тест перед откликом";
+    } else if (reason === "already_applied") {
+      status.textContent = "⚠️ Вы уже откликались ранее";
+    } else {
+      status.textContent = "⛔ Отклик запрещён: резюме не подходит или недоступно";
+  }
 
-    } else if (res.status === 409) {
-      status.textContent = "⚠️ Вы уже откликались на эту вакансию";
-      status.className = "text-sm text-yellow-600";
-
-    } else if (res.status === 400) {
+   status.className = "text-sm text-red-600";
+}
+ else if (res.status === 400) {
       status.textContent = `❌ Неверный запрос: ${data?.error || 'Проверь резюме'}`;
       status.className = "text-sm text-red-600";
 
