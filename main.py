@@ -282,13 +282,13 @@ def respond_to_vacancy():
     elif apply_resp.status_code == 403:
         error_json = apply_resp.json()
         error_value = error_json.get("errors", [{}])[0].get("value", "")
-        description = error_json.get("description", "").lower()
+        error_text = error_json.get("error", "").lower()
         if error_value == "test_required":
             return jsonify({
                 "error": "📋 Для этой вакансии нужно пройти тест",
                 "reason": "test_required"
             }), 403
-        elif "уже откликались" in description:
+        elif "уже откликались" in error_text:
             return jsonify({
                 "error": "⚠️ Вы уже откликались на эту вакансию",
                 "reason": "already_applied"
