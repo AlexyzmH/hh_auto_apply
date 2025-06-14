@@ -101,6 +101,8 @@
   </div>
 
   <script>
+  let lastCustomer = document.querySelector('input[name="customer_id"]').value;
+
   document.getElementById('searchForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     const formData = new FormData(this);
@@ -123,12 +125,13 @@
 
   function renderVacancies(vacancies) {
     const results = document.getElementById('results');
+    results.innerHTML = '';
+
     if (vacancies.length === 0) {
       results.innerHTML = '<p class="text-gray-500">🔍 Вакансии не найдены</p>';
       return;
     }
 
-    results.innerHTML = '';
     for (const v of vacancies) {
       const salary = v.salary ?
         `${v.salary.from || ''} – ${v.salary.to || ''} ${v.salary.currency}` :
@@ -137,6 +140,7 @@
       const company = v.employer?.name || 'Без компании';
       const city = v.area?.name || 'Город не указан';
       const url = v.alternate_url || '#';
+      const vacancyId = v.id;
 
       const card = document.createElement('div');
       card.className = 'border p-4 rounded-lg shadow bg-white';
@@ -148,18 +152,69 @@
         <p class="text-gray-700">💼 ${company}</p>
         <p class="text-gray-700">📍 ${city}</p>
         <p class="text-gray-700">💰 Зарплата: ${salary}</p>
-        <div class="mt-2">
+        <div class="mt-2 flex items-center gap-2">
           <button class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
-            onclick="alert('Тут будет отклик (или сделаем реальный запрос позже)')">
+            onclick="respondToVacancy('${vacancyId}')">
             Откликнуться
           </button>
+          <span id="respond-status-${vacancyId}" class="text-sm text-gray-500"></span>
         </div>
       `;
 
       results.appendChild(card);
     }
   }
+
+  async function respondToVacancy(vacancyId) {
+    const status = document.getElementById(`respond-status-${vacancyId}`);
+    status.textContent = "⏳ Откликаемся...";
+
+    try {
+      const res = await fetch('/respond', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          customer_id: lastCustomer,
+          vacancy_id: vacancyId
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.status === 201) {
+        status.textContent = "✅ Успешно откликнулись!";
+        status.className = "text-sm text-green-600";
+      } else if (res.status === 303) {
+        status.innerHTML = `🔀 Нужен ручной отклик:
+          <a href="${data.manual_url}" class="text-blue-600 underline" target="_blank">Открыть</a>`;
+        status.className = "text-sm text-yellow-600";
+      } else if (res.status === 403) {
+        if (data.description?.includes("тест")) {
+          status.textContent = "📋 Требуется пройти тест перед откликом";
+        } else {
+          status.textContent = "⛔ Отклик запрещён: резюме не подходит";
+        }
+        status.className = "text-sm text-red-600";
+      } else if (res.status === 409) {
+        status.textContent = "⚠️ Уже откликались на эту вакансию";
+        status.className = "text-sm text-yellow-600";
+      } else if (res.status === 400) {
+        status.textContent = "❌ Неверный запрос — проверь резюме/вакансию";
+        status.className = "text-sm text-red-600";
+      } else {
+        status.textContent = `❌ Неизвестная ошибка (${res.status})`;
+        status.className = "text-sm text-red-600";
+      }
+
+    } catch (err) {
+      status.textContent = "❌ Ошибка сети или сервера";
+      status.className = "text-sm text-red-600";
+    }
+  }
 </script>
+
 
 </body>
 </html>
