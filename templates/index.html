@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>SmartApply – Клиенты</title>
+</head>
+<body>
+    <h1>SmartApply</h1>
+    <h2>Выберите клиента</h2>
+    <ul>
+        {% for cid in customers %}
+            <li>
+                <a href="/search?customer_id={{ cid }}">{{ cid }}</a>
+            </li>
+        {% endfor %}
+    </ul>
+    <hr>
+    <a href="/login">
+        <button>➕ Новый пользователь</button>
+    </a>
+</body>
+</html>

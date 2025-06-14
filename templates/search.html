@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Поиск вакансий</title>
+</head>
+<body>
+    <h2>Поиск вакансий</h2>
+    <form id="search-form">
+        <input type="hidden" id="customer_id" value="{{ customer_id }}">
+        <input type="text" id="keyword" placeholder="Ключевое слово">
+        <button type="submit">🔍 Найти</button>
+    </form>
+
+    <ul id="results"></ul>
+
+    <script>
+        const form = document.getElementById("search-form");
+        const results = document.getElementById("results");
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            results.innerHTML = "Загрузка...";
+            const keyword = document.getElementById("keyword").value;
+            const customer_id = document.getElementById("customer_id").value;
+
+            const res = await fetch(`/vacancies?customer_id=${customer_id}&text=${encodeURIComponent(keyword)}`);
+            const data = await res.json();
+
+            results.innerHTML = "";
+            if (data.items) {
+                data.items.forEach(vac => {
+                    const li = document.createElement("li");
+                    li.innerHTML = `
+                        <a href="${vac.alternate_url}" target="_blank">${vac.name}</a>
+                        (${vac.employer.name})
+                        <button onclick="respond('${vac.id}')">Откликнуться</button>
+                    `;
+                    results.appendChild(li);
+                });
+            }
+        });
+
+        async function respond(vacancy_id) {
+            const customer_id = document.getElementById("customer_id").value;
+            const res = await fetch("/respond", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ customer_id, vacancy_id })
+            });
+            const data = await res.json();
+            alert(data.message || data.error);
+        }
+    </script>
+</body>
+</html>
