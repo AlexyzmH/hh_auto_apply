@@ -35,7 +35,9 @@ def login():
 def auth():
     code = request.args.get("code")
     if not code:
-        return "Ошибка: нет кода авторизации", 400
+        return "❌ Ошибка: нет кода авторизации", 400
+
+    print("🔁 Получен code:", code)
 
     token_url = "https://hh.ru/oauth/token"
     data = {
@@ -46,38 +48,39 @@ def auth():
         "redirect_uri": REDIRECT_URI
     }
 
+    print("📡 Отправляем POST на /oauth/token")
     response = requests.post(token_url, data=data)
-
-    print("📡 Ответ от HH /oauth/token:")
     print("🔢 Статус:", response.status_code)
     print("📦 Тело:", response.text)
 
     if response.status_code != 200:
-        return f"Ошибка получения токена: {response.text}", 500
+        return f"❌ Ошибка получения токена: {response.text}", 500
 
     token_data = response.json()
+    print("✅ Получен access_token:", token_data.get("access_token"))
 
     try:
+        print("👤 Пытаемся получить /me")
         me_resp = requests.get("https://api.hh.ru/me", headers={
             "Authorization": f"Bearer {token_data['access_token']}",
             "HH-User-Agent": "SmartApply/1.0"
         })
 
+        print("📡 /me статус:", me_resp.status_code)
+        print("📃 /me тело:", me_resp.text)
+
         if me_resp.status_code != 200:
-            print("❌ Ошибка получения информации о пользователе:")
-            print(me_resp.text)
-            return f"Ошибка получения имени пользователя: {me_resp.text}", 500
+            return f"❌ Ошибка получения имени пользователя: {me_resp.text}", 500
 
         me_data = me_resp.json()
         username = me_data.get("first_name", "") + " " + me_data.get("last_name", "")
+        print("📛 Имя пользователя:", username)
 
     except Exception as e:
         print("🔥 Ошибка при получении /me:", e)
-        return f"Ошибка при обработке данных пользователя: {str(e)}", 500
+        return f"❌ Ошибка при обработке данных пользователя: {str(e)}", 500
 
-    me_data = me_resp.json()
-    username = me_data.get("first_name", "") + " " + me_data.get("last_name", "")
-
+    print("📥 Добавляем нового клиента...")
     customer_id = add_customer_auto(
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET,
@@ -88,7 +91,7 @@ def auth():
         username=username
     )
 
-
+    print("✅ Клиент сохранён под ID:", customer_id)
     return redirect(f"/search?customer_id={customer_id}")
 
 @app.route("/customer/<customer_id>")
@@ -123,9 +126,6 @@ def search():
 def get_vacancies():
     from auth_utils import load_auth_data
     customer_id = request.args.get("customer_id")
-    keyword = request.args.get("text", "")
-    area = request.args.get("area")
-
     customers = load_auth_data()
     customer = customers.get(customer_id)
 
@@ -141,11 +141,39 @@ def get_vacancies():
         "HH-User-Agent": "SmartApply/1.0 (joopsasakomarov37@yahoo.com)"
     }
 
-    print("📦 Headers:", headers)
+    # Формируем параметры для запроса
+    params = {}
+    for key in [
+        "text", "area", "not_word", "specialization", "experience",
+        "employment", "schedule", "salary"
+    ]:
+        val = request.args.get(key)
+        if val:
+            params[key] = val
 
-    params = {"text": keyword, "area": area, "per_page": 50}
-    resp = requests.get("https://api.hh.ru/vacancies", headers=headers, params=params)
+    # Обработка множественных полей search_field
+    search_fields = request.args.getlist("search_field")
+    for field in search_fields:
+        params.setdefault("search_field", []).append(field)
+
+    # Обработка чекбокса only_with_salary
+    if request.args.get("only_with_salary") == "true":
+        params["only_with_salary"] = "true"
+
+    # Преобразуем массив search_field → множественные query params
+    search_query = []
+    for k, v in params.items():
+        if isinstance(v, list):
+            for item in v:
+                search_query.append((k, item))
+        else:
+            search_query.append((k, v))
+
+    search_query.append(("per_page", 50))
+
+    resp = requests.get("https://api.hh.ru/vacancies", headers=headers, params=search_query)
     return jsonify(resp.json())
+
 
 @app.route("/delete/<customer_id>", methods=["POST"])
 def delete_customer(customer_id):

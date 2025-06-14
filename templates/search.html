@@ -1,59 +1,83 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Поиск вакансий</title>
+  <meta charset="UTF-8">
+  <title>Поиск вакансий</title>
 </head>
 <body>
-    <h2>Поиск вакансий</h2>
-    <form id="search-form">
-        <input type="hidden" id="customer_id" value="{{ customer_id }}">
-        <input type="text" id="keyword" placeholder="Ключевое слово">
-        <button type="submit">🔍 Найти</button>
-    </form>
+  <h1>Поиск вакансий</h1>
+  <form id="searchForm">
+    <input type="hidden" name="customer_id" value="{{ customer_id }}">
 
-    <ul id="results"></ul>
+    <label>Ключевые слова:</label>
+    <input type="text" name="text"><br>
 
-    <script>
-        const form = document.getElementById("search-form");
-        const results = document.getElementById("results");
+    <label>Регион (area ID):</label>
+    <input type="text" name="area"><br>
 
-        form.addEventListener("submit", async (e) => {
-            e.preventDefault();
-            results.innerHTML = "Загрузка...";
-            const keyword = document.getElementById("keyword").value;
-            const customer_id = document.getElementById("customer_id").value;
+    <label>Искать в:</label><br>
+    <input type="checkbox" name="search_field" value="name"> Название<br>
+    <input type="checkbox" name="search_field" value="company_name"> Компания<br>
+    <input type="checkbox" name="search_field" value="description"> Описание<br>
 
-            const res = await fetch(`/vacancies?customer_id=${customer_id}&text=${encodeURIComponent(keyword)}`);
-            const data = await res.json();
+    <label>Исключить слова:</label>
+    <input type="text" name="not_word"><br>
 
-            results.innerHTML = "";
-            if (data.items) {
-                data.items.forEach(vac => {
-                    const li = document.createElement("li");
-                    li.innerHTML = `
-                        <a href="${vac.alternate_url}" target="_blank">${vac.name}</a>
-                        (${vac.employer.name})
-                        <button onclick="respond('${vac.id}')">Откликнуться</button>
-                    `;
-                    results.appendChild(li);
-                });
-            }
-        });
+    <label>Специализация:</label>
+    <input type="text" name="specialization"><br>
 
-        async function respond(vacancy_id) {
-            const customer_id = document.getElementById("customer_id").value;
+    <label>Опыт:</label>
+    <select name="experience">
+      <option value="">--</option>
+      <option value="noExperience">Нет опыта</option>
+      <option value="between1And3">1–3 года</option>
+      <option value="between3And6">3–6 лет</option>
+      <option value="moreThan6">Более 6 лет</option>
+    </select><br>
 
-            console.log("📤 Отправка на отклик:", { customer_id, vacancy_id });
+    <label>Тип занятости:</label>
+    <select name="employment">
+      <option value="">--</option>
+      <option value="full">Полная</option>
+      <option value="part">Частичная</option>
+      <option value="project">Проектная</option>
+      <option value="volunteer">Волонтёрство</option>
+      <option value="probation">Стажировка</option>
+    </select><br>
 
-            const res = await fetch("/respond", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ customer_id, vacancy_id })
-            });
-            const data = await res.json();
-            alert(data.message || data.error);
-        }
-    </script>
+    <label>График:</label>
+    <select name="schedule">
+      <option value="">--</option>
+      <option value="fullDay">Полный день</option>
+      <option value="shift">Сменный</option>
+      <option value="flexible">Гибкий</option>
+      <option value="remote">Удалёнка</option>
+      <option value="flyInFlyOut">Вахта</option>
+    </select><br>
+
+    <label>Зарплата от:</label>
+    <input type="number" name="salary"><br>
+
+    <label><input type="checkbox" name="only_with_salary" value="true"> Только с указанной зарплатой</label><br>
+
+    <button type="submit">Поиск</button>
+  </form>
+
+  <div id="results"></div>
+
+  <script>
+    document.getElementById('searchForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      const params = new URLSearchParams();
+      for (const [key, value] of formData.entries()) {
+        if (value) params.append(key, value);
+      }
+      document.getElementById('results').innerText = '🔎 Загружаем вакансии...';
+      const res = await fetch(`/vacancies?${params.toString()}`);
+      const data = await res.json();
+      document.getElementById('results').innerText = JSON.stringify(data, null, 2);
+    });
+  </script>
 </body>
 </html>
