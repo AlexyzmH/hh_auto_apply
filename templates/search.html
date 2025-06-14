@@ -182,6 +182,7 @@
       });
 
       const data = await res.json();
+      console.log("📬 Ответ сервера:", res.status, data);
 
       if (res.status === 201) {
         status.textContent = "✅ Успешно откликнулись!";
