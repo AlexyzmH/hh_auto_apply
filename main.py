@@ -1,15 +1,19 @@
+import os
+
 from flask import Flask, redirect, request, render_template, jsonify
-from auth_utils import add_customer_auto, load_auth_data
+from auth_utils import add_customer_auto, load_auth_data, get_valid_access_token
 from datetime import datetime
 import requests
 import json
+from dotenv import load_dotenv
 
 app = Flask(__name__)
 
-CLIENT_ID = "VL9NCGOGJDT668M9MALKFO2VAUJCDE948AJ5CO6DQV3D5TRMBOK5S5O9CVER58NA"
-CLIENT_SECRET = "NU2SKUJUU4NGBT4KDBVU7C588PO00KUDE110GOR194JBGJPB43JU72FC9DU3J8JM"
-REDIRECT_URI = "http://localhost:5000/auth"
+load_dotenv()
 
+CLIENT_ID = os.getenv("CLIENT_ID")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+REDIRECT_URI = os.getenv("REDIRECT_URI")
 
 
 @app.route("/")
@@ -43,20 +47,70 @@ def auth():
     }
 
     response = requests.post(token_url, data=data)
+
+    print("📡 Ответ от HH /oauth/token:")
+    print("🔢 Статус:", response.status_code)
+    print("📦 Тело:", response.text)
+
     if response.status_code != 200:
         return f"Ошибка получения токена: {response.text}", 500
 
     token_data = response.json()
+
+    try:
+        me_resp = requests.get("https://api.hh.ru/me", headers={
+            "Authorization": f"Bearer {token_data['access_token']}",
+            "HH-User-Agent": "SmartApply/1.0"
+        })
+
+        if me_resp.status_code != 200:
+            print("❌ Ошибка получения информации о пользователе:")
+            print(me_resp.text)
+            return f"Ошибка получения имени пользователя: {me_resp.text}", 500
+
+        me_data = me_resp.json()
+        username = me_data.get("first_name", "") + " " + me_data.get("last_name", "")
+
+    except Exception as e:
+        print("🔥 Ошибка при получении /me:", e)
+        return f"Ошибка при обработке данных пользователя: {str(e)}", 500
+
+    me_data = me_resp.json()
+    username = me_data.get("first_name", "") + " " + me_data.get("last_name", "")
+
     customer_id = add_customer_auto(
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET,
         access_token=token_data["access_token"],
         refresh_token=token_data.get("refresh_token"),
         expires_in=token_data["expires_in"],
-        obtained_at=datetime.utcnow().isoformat()
+        obtained_at=datetime.utcnow().isoformat(),
+        username=username
     )
 
+
     return redirect(f"/search?customer_id={customer_id}")
+
+@app.route("/customer/<customer_id>")
+def customer_dashboard(customer_id):
+    from auth_utils import load_auth_data
+    auth_data = load_auth_data()
+    customer = auth_data.get(customer_id)
+    if not customer:
+        return f"Клиент {customer_id} не найден", 404
+
+    headers = {
+        "Authorization": f"Bearer {customer['access_token']}",
+        "HH-User-Agent": "SmartApply/1.0 (joopsasakomarov37@yahoo.com)"
+    }
+
+    resumes_resp = requests.get("https://api.hh.ru/resumes/mine", headers=headers)
+    if resumes_resp.status_code != 200:
+        return f"Не удалось получить резюме: {resumes_resp.text}", 500
+
+    resumes = resumes_resp.json().get("items", [])
+    return render_template("customer.html", customer_id=customer_id, resumes=resumes)
+
 
 
 @app.route("/search")
@@ -74,28 +128,61 @@ def get_vacancies():
 
     customers = load_auth_data()
     customer = customers.get(customer_id)
+
     if not customer:
         return jsonify({"error": "Клиент не найден"}), 404
 
-    headers = {"Authorization": f"Bearer {customer['access_token']}"}
+    access_token = get_valid_access_token(customer_id)
+    if not access_token:
+        return jsonify({"error": "Не удалось получить access_token"}), 401
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "HH-User-Agent": "SmartApply/1.0 (joopsasakomarov37@yahoo.com)"
+    }
+
+    print("📦 Headers:", headers)
+
     params = {"text": keyword, "area": area, "per_page": 50}
     resp = requests.get("https://api.hh.ru/vacancies", headers=headers, params=params)
     return jsonify(resp.json())
 
+@app.route("/delete/<customer_id>", methods=["POST"])
+def delete_customer(customer_id):
+    from auth_utils import load_auth_data, save_auth_data
+    data = load_auth_data()
+
+    if customer_id in data:
+        del data[customer_id]
+        save_auth_data(data)
+        print(f"🗑 Удалён клиент: {customer_id}")
+    else:
+        print(f"⚠️ Попытка удалить несуществующего клиента: {customer_id}")
+
+    return redirect("/")
+
 
 @app.route("/respond", methods=["POST"])
 def respond_to_vacancy():
-    from auth_utils import load_auth_data
     data = request.json
     customer_id = data.get("customer_id")
     vacancy_id = data.get("vacancy_id")
+
+    print(f"🚨 /respond: customer_id={customer_id}, vacancy_id={vacancy_id}")
 
     auth_data = load_auth_data()
     customer = auth_data.get(customer_id)
     if not customer:
         return jsonify({"error": "Клиент не найден"}), 404
 
-    headers = {"Authorization": f"Bearer {customer['access_token']}"}
+    access_token = get_valid_access_token(customer_id)
+    if not access_token:
+        return jsonify({"error": "Не удалось получить access_token"}), 401
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "HH-User-Agent": "SmartApply/1.0 (joopsasakomarov37@yahoo.com)"
+    }
 
     # 1. Получаем вакансию
     vacancy_resp = requests.get(f"https://api.hh.ru/vacancies/{vacancy_id}", headers=headers)
@@ -103,14 +190,10 @@ def respond_to_vacancy():
         return jsonify({"error": "Не удалось получить вакансию"}), 500
     vacancy = vacancy_resp.json()
 
-    print(json.dumps(vacancy, indent=2, ensure_ascii=False))  # читаемо и по-русски
-    if vacancy.get("response_url") is None:
-        return jsonify({
-            "error": "Отклик невозможен через API. Только вручную на сайте.",
-            "manual_url": vacancy.get("apply_alternate_url")
-        }), 400
+    # 2. Проверка доступности отклика
 
-    # 2. Получаем резюме
+
+    # 3. Получаем резюме
     resumes_resp = requests.get("https://api.hh.ru/resumes/mine", headers=headers)
     resumes = resumes_resp.json().get("items", [])
     if not resumes:
@@ -118,28 +201,83 @@ def respond_to_vacancy():
 
     resume_id = resumes[0]["id"]
 
-    # 3. Формируем отклик
-    payload = {
-        "resume_id": resume_id
+    # 4. Проверка подходящих резюме
+    suitable_resp = requests.get(vacancy.get("suitable_resumes_url"), headers=headers)
+    suitable_ids = [r["id"] for r in suitable_resp.json().get("items", [])]
+    if resume_id not in suitable_ids:
+        return jsonify({"error": "Резюме не подходит для отклика на эту вакансию"}), 403
+
+    # 5. Формируем тело запроса — multipart/form-data
+    form_data = {
+        "resume_id": resume_id,
+        "vacancy_id": vacancy_id
     }
-
     if vacancy.get("response_letter_required"):
-        payload["message"] = "Здравствуйте! Заинтересовала ваша вакансия. Готов обсудить детали."
+        form_data["message"] = "Здравствуйте! Заинтересовала ваша вакансия. Готов обсудить детали."
 
-    print("resume_id "  + resume_id)
+
+    # 6. Отправляем отклик
+    print("📄 Отправляем отклик с данными:")
+    print("📌 form_data:", json.dumps(form_data, ensure_ascii=False, indent=2))
+    print("🧾 headers:", json.dumps(headers, ensure_ascii=False, indent=2))
+    print("📎 suitable resume_ids:", suitable_ids)
+    print("✅ Используемое resume_id:", resume_id)
 
     apply_resp = requests.post(
-        f"https://api.hh.ru/vacancies/{vacancy_id}/send",
+        "https://api.hh.ru/negotiations",
         headers=headers,
-        json=payload
+        files={key: (None, value) for key, value in form_data.items()}
     )
 
-    if apply_resp.status_code != 204:
-        return jsonify({"error": apply_resp.json()}), 500
+    print("📥 Ответ от API:")
+    print("📌 Статус:", apply_resp.status_code)
+    print("📃 Тело:", apply_resp.text)
 
-    return jsonify({"message": "Отклик успешно отправлен!"})
+    # 7. Обработка ответа
+    if apply_resp.status_code == 201:
+        return jsonify({"message": "✅ Отклик успешно отправлен!"})
+
+    elif apply_resp.status_code == 303:
+        return jsonify({
+            "error": "🔀 Вакансия требует прямого отклика. Используйте сайт.",
+            "manual_url": vacancy.get("apply_alternate_url")
+        }), 303
+
+    elif apply_resp.status_code == 403:
+        error_json = apply_resp.json()
+        error_value = error_json.get("errors", [{}])[0].get("value")
+        if error_value == "test_required":
+            return jsonify({
+
+                "error": "📋 Для этой вакансии нужно сначала пройти тест",
+
+                "description": error_json.get("description", "")
+
+            }), 403
+        return jsonify({
+            "error": "⛔ Отклик запрещён для этого резюме",
+            "details": error_json
+        }), 403
+
+
+    elif apply_resp.status_code == 400:
+        print("❌ Ошибка 400. Ответ от сервера:")
+        print(apply_resp.text)
+        return jsonify({"error": apply_resp.json()}), 400
+
+
+    elif apply_resp.status_code == 409:
+        return jsonify({"error": "⚠️ Вы уже откликались на эту вакансию"}), 409
+
+    else:
+        return jsonify({
+            "error": "❌ Неизвестная ошибка",
+            "status": apply_resp.status_code,
+            "body": apply_resp.text
+        }), 500
+
 
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)

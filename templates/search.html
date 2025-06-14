@@ -43,6 +43,9 @@
 
         async function respond(vacancy_id) {
             const customer_id = document.getElementById("customer_id").value;
+
+            console.log("📤 Отправка на отклик:", { customer_id, vacancy_id });
+
             const res = await fetch("/respond", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },

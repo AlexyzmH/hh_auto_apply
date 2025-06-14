@@ -1,22 +1,41 @@
+<!-- Tailwind CDN для быстрого старта -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <title>SmartApply – Клиенты</title>
+  <meta charset="UTF-8">
+  <title>SmartApply – Клиенты</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body>
-    <h1>SmartApply</h1>
-    <h2>Выберите клиента</h2>
-    <ul>
+<body class="bg-gray-100 text-gray-900 font-sans">
+  <div class="container mx-auto p-6">
+    <header class="mb-6">
+      <h1 class="text-3xl font-bold mb-2">SmartApply</h1>
+      <p class="text-sm text-gray-600">Выберите клиента для управления резюме и откликами</p>
+    </header>
+
+    <main>
+      <ul class="space-y-2">
         {% for cid in customers %}
-            <li>
-                <a href="/search?customer_id={{ cid }}">{{ cid }}</a>
-            </li>
-        {% endfor %}
-    </ul>
-    <hr>
-    <a href="/login">
-        <button>➕ Новый пользователь</button>
-    </a>
+        <li class="flex items-center justify-between bg-white p-4 rounded shadow">
+          <a href="/customer/{{ cid }}" class="text-blue-600 hover:underline">
+            👤 {{ customers[cid]["username"] or cid }}
+          </a>
+          <form method="post" action="/delete/{{ cid }}" onsubmit="return confirm('Удалить клиента {{ customers[cid]['username'] or cid }}?');">
+            <button type="submit" class="text-red-600 hover:text-red-800 font-semibold">🗑 Удалить</button>
+          </form>
+        </li>
+          {% endfor %}
+      </ul>
+
+      <div class="mt-6">
+        <a href="/login">
+          <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+            ➕ Новый пользователь
+          </button>
+        </a>
+      </div>
+    </main>
+  </div>
 </body>
 </html>
