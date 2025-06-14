@@ -263,7 +263,7 @@ def respond_to_vacancy():
 
     # 7. Обработка ответа
     if apply_resp.status_code == 201:
-        return jsonify({"message": "✅ Отклик успешно отправлен!"})
+        return jsonify({"message": "✅ Отклик успешно отправлен!"}), 201
 
     elif apply_resp.status_code == 303:
         return jsonify({

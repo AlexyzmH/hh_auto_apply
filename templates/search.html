@@ -166,54 +166,63 @@
   }
 
   async function respondToVacancy(vacancyId) {
-    const status = document.getElementById(`respond-status-${vacancyId}`);
-    status.textContent = "⏳ Откликаемся...";
+  const status = document.getElementById(`respond-status-${vacancyId}`);
+  status.textContent = "⏳ Откликаемся...";
 
-    try {
-      const res = await fetch('/respond', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          customer_id: lastCustomer,
-          vacancy_id: vacancyId
-        })
-      });
+  try {
+    const res = await fetch('/respond', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        customer_id: lastCustomer,
+        vacancy_id: vacancyId
+      })
+    });
 
-      const data = await res.json();
-      console.log("📬 Ответ сервера:", res.status, data);
+    const data = await res.json();
+    console.log("📬 Ответ сервера:", res.status, data);
 
-      if (res.status === 201) {
-        status.textContent = "✅ Успешно откликнулись!";
-        status.className = "text-sm text-green-600";
-      } else if (res.status === 303) {
-        status.innerHTML = `🔀 Нужен ручной отклик:
-          <a href="${data.manual_url}" class="text-blue-600 underline" target="_blank">Открыть</a>`;
-        status.className = "text-sm text-yellow-600";
-      } else if (res.status === 403) {
-        if (data.description?.includes("тест")) {
-          status.textContent = "📋 Требуется пройти тест перед откликом";
-        } else {
-          status.textContent = "⛔ Отклик запрещён: резюме не подходит";
-        }
-        status.className = "text-sm text-red-600";
-      } else if (res.status === 409) {
-        status.textContent = "⚠️ Уже откликались на эту вакансию";
-        status.className = "text-sm text-yellow-600";
-      } else if (res.status === 400) {
-        status.textContent = "❌ Неверный запрос — проверь резюме/вакансию";
-        status.className = "text-sm text-red-600";
+    if (res.status === 201) {
+      status.textContent = "✅ Успешно откликнулись!";
+      status.className = "text-sm text-green-600";
+
+    } else if (res.status === 303) {
+      const link = data.manual_url || "#";
+      status.innerHTML = `🔀 Вакансия требует ручного отклика:
+        <a href="${link}" target="_blank" class="text-blue-600 underline">Открыть на HH</a>`;
+      status.className = "text-sm text-yellow-600";
+
+    } else if (res.status === 403) {
+      const errorCode = data?.details?.errors?.[0]?.value || "";
+
+      if (errorCode === "test_required") {
+        status.textContent = "📋 Требуется пройти тест перед откликом";
       } else {
-        status.textContent = `❌ Неизвестная ошибка (${res.status})`;
-        status.className = "text-sm text-red-600";
+        status.textContent = "⛔ Отклик запрещён: резюме не подходит или недоступно";
       }
+      status.className = "text-sm text-red-600";
 
-    } catch (err) {
-      status.textContent = "❌ Ошибка сети или сервера";
+    } else if (res.status === 409) {
+      status.textContent = "⚠️ Вы уже откликались на эту вакансию";
+      status.className = "text-sm text-yellow-600";
+
+    } else if (res.status === 400) {
+      status.textContent = `❌ Неверный запрос: ${data?.error || 'Проверь резюме'}`;
+      status.className = "text-sm text-red-600";
+
+    } else {
+      status.textContent = `❌ Неизвестная ошибка (${res.status})`;
       status.className = "text-sm text-red-600";
     }
+
+  } catch (err) {
+    status.textContent = "❌ Ошибка сети или сервера";
+    status.className = "text-sm text-red-600";
   }
+}
+
 </script>
 
 
