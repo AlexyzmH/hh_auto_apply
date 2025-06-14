@@ -278,15 +278,28 @@ def respond_to_vacancy():
         return jsonify({"error": apply_resp.json()}), 400
 
 
-    elif apply_resp.status_code == 409:
-        try:
-            _ = apply_resp.json()  # Пытаемся убедиться, что тело - JSON
-        except:
-            pass  # просто молча продолжаем
-        return jsonify({
-            "error": "⚠️ Вы уже откликались на эту вакансию",
-            "reason": "already_applied"
-        }), 403  #попал в нужный блок
+
+    elif apply_resp.status_code == 403:
+        error_json = apply_resp.json()
+        error_value = error_json.get("errors", [{}])[0].get("value", "")
+        description = error_json.get("description", "").lower()
+        if error_value == "test_required":
+            return jsonify({
+                "error": "📋 Для этой вакансии нужно пройти тест",
+                "reason": "test_required"
+            }), 403
+        elif "уже откликались" in description:
+            return jsonify({
+                "error": "⚠️ Вы уже откликались на эту вакансию",
+                "reason": "already_applied"
+            }), 403
+        else:
+            return jsonify({
+                "error": "⛔ Отклик запрещён",
+                "reason": error_value or "unknown",
+                "details": error_json
+            }), 403
+
 
 
     else:
