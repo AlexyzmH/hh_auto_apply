@@ -288,17 +288,17 @@ def respond_to_vacancy():
                 "error": "📋 Для этой вакансии нужно пройти тест",
                 "reason": "test_required"
             }), 403
-        elif "уже откликались" in error_text:
-            return jsonify({
-                "error": "⚠️ Вы уже откликались на эту вакансию",
-                "reason": "already_applied"
-            }), 403
         else:
             return jsonify({
-                "error": "⛔ Отклик запрещён",
-                "reason": error_value or "unknown",
-                "details": error_json
-            }), 403
+            "error": "⚠️ Вы уже откликались на эту вакансию",
+            "reason": "already_applied"
+        }), 403
+        #else:
+            #return jsonify({
+                #"error": "⛔ Отклик запрещён",
+                #"reason": error_value or "unknown",
+                #"details": error_json
+            #}), 403
 
 
 
