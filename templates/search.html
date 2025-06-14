@@ -200,7 +200,7 @@
 
     if (reason === "test_required") {
       status.textContent = "📋 Требуется пройти тест перед откликом";
-    } else if (reason === "already_applied") {
+    } else if (reason === "already_applied" || errorText.includes("уже откликались")) {
       status.textContent = "⚠️ Вы уже откликались ранее";
     } else {
       status.textContent = "⛔ Отклик запрещён: резюме не подходит или недоступно";

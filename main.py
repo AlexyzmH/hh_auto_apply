@@ -290,7 +290,12 @@ def respond_to_vacancy():
 
 
 
+
     elif apply_resp.status_code == 409:
+        try:
+            _ = apply_resp.json()  # Пытаемся убедиться, что тело - JSON
+        except:
+            pass  # просто молча продолжаем
         return jsonify({
             "error": "⚠️ Вы уже откликались на эту вакансию",
             "reason": "already_applied"
