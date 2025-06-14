@@ -196,18 +196,19 @@
 
     }
     else if (res.status === 403) {
-    const reason = data?.reason || "";
+  const reason = data?.reason || "";
 
-    if (reason === "test_required") {
-      status.textContent = "📋 Требуется пройти тест перед откликом";
-    } else if (reason === "already_applied" || errorText.includes("уже откликались")) {
-      status.textContent = "⚠️ Вы уже откликались ранее";
-    } else {
-      status.textContent = "⛔ Отклик запрещён: резюме не подходит или недоступно";
+  if (reason === "test_required") {
+    status.textContent = "📋 Требуется пройти тест перед откликом";
+  } else if (reason === "already_applied") {
+    status.textContent = "⚠️ Вы уже откликались ранее";
+  } else {
+    status.textContent = "⛔ Отклик запрещён: резюме не подходит или недоступно";
   }
 
-   status.className = "text-sm text-red-600";
+  status.className = "text-sm text-red-600";
 }
+
  else if (res.status === 400) {
       status.textContent = `❌ Неверный запрос: ${data?.error || 'Проверь резюме'}`;
       status.className = "text-sm text-red-600";

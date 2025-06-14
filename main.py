@@ -272,21 +272,10 @@ def respond_to_vacancy():
         }), 303
 
 
-
-    elif apply_resp.status_code == 409:
-        return jsonify({
-            "error": "⚠️ Вы уже откликались на эту вакансию",
-            "reason": "already_applied"
-        }), 403  # попал в нужный блок
-
-
-
     elif apply_resp.status_code == 400:
         print("❌ Ошибка 400. Ответ от сервера:")
         print(apply_resp.text)
         return jsonify({"error": apply_resp.json()}), 400
-
-
 
 
     elif apply_resp.status_code == 409:
