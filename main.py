@@ -168,42 +168,68 @@ def get_vacancies():
         "HH-User-Agent": "SmartApply/1.0 (joopsasakomarov37@yahoo.com)"
     }
 
-    # Поддерживаемые поля (одиночные)
     allowed_keys = [
         "text", "area", "not_word", "specialization", "experience",
         "employment", "schedule", "salary"
     ]
 
     params = {}
-
-    # Одиночные поля
     for key in allowed_keys:
         val = request.args.get(key)
         if val:
             params[key] = val
 
-    # Обработка поля search_field — используем только ОДНО значение
     search_fields = request.args.getlist("search_field")
     if search_fields:
-        params["search_field"] = search_fields[0]  # только первый
+        params["search_field"] = search_fields[0]
 
-    # Обработка only_with_salary
     if request.args.get("only_with_salary") == "true":
         params["only_with_salary"] = "true"
 
-    # Добавим per_page
-    params["per_page"] = 100
+    per_page = 50
+    target_results = 50
+    page = 0
+    collected = []
 
-    print("🔍 Параметры поиска:", params)
+    # Получим список уже откликнутых ID
+    if RESPONSES_FILE.exists():
+        try:
+            with open(RESPONSES_FILE, "r", encoding="utf-8") as f:
+                all_responses = json.load(f)
+        except json.JSONDecodeError:
+            all_responses = {}
+    else:
+        all_responses = {}
 
-    # Запрос к HH API
-    resp = requests.get("https://api.hh.ru/vacancies", headers=headers, params=params)
+    resume_id = customer.get("selected_resume_id")
+    applied_ids = set()
+    if resume_id:
+        customer_block = all_responses.get(customer_id, {})
+        applied_ids = set(item["vacancy_id"] for item in customer_block.get(resume_id, []))
 
-    if resp.status_code != 200:
-        print("❌ Ошибка поиска:", resp.status_code, resp.text)
-        return jsonify({"error": "Ошибка при поиске", "status": resp.status_code}), resp.status_code
+    # Загружаем вакансии постранично
+    while len(collected) < target_results:
+        params["page"] = page
+        params["per_page"] = per_page
+        resp = requests.get("https://api.hh.ru/vacancies", headers=headers, params=params)
+        if resp.status_code != 200:
+            print("❌ Ошибка поиска:", resp.status_code, resp.text)
+            return jsonify({"error": "Ошибка при поиске", "status": resp.status_code}), resp.status_code
 
-    return jsonify(resp.json())
+        vacancies = resp.json().get("items", [])
+        if not vacancies:
+            break
+
+        filtered = [v for v in vacancies if v["id"] not in applied_ids]
+        collected.extend(filtered)
+
+        if len(vacancies) < per_page:
+            break
+
+        page += 1
+
+    return jsonify({"items": collected[:target_results]})
+
 
 
 
