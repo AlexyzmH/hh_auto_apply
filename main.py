@@ -101,7 +101,7 @@ def auth():
     )
 
     print("✅ Клиент сохранён под ID:", customer_id)
-    return redirect(f"/customer?customer_id={customer_id}")
+    return redirect(f"/customer/{customer_id}")
 
 @app.route("/customer/<customer_id>")
 def customer_dashboard(customer_id):
