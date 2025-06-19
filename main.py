@@ -251,9 +251,14 @@ def respond_to_vacancy():
         "resume_id": resume_id,
         "vacancy_id": vacancy_id
     }
-    if vacancy.get("response_letter_required"):
-        form_data["message"] = "Здравствуйте! Заинтересовала ваша вакансия. Готов обсудить детали."
 
+    # Новое: если message передан — используем его
+    message = data.get("message", "").strip()
+    if message:
+        form_data["message"] = message
+    # Иначе — если HH требует письмо, а мы его не дали — вставим шаблон
+    elif vacancy.get("response_letter_required"):
+        form_data["message"] = "Здравствуйте! Заинтересовала ваша вакансия. Готов обсудить детали."
 
     # 6. Отправляем отклик
     print("📄 Отправляем отклик с данными:")
