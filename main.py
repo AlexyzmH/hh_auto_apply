@@ -220,14 +220,20 @@ def respond_to_vacancy():
 
     # 2. Проверка доступности отклика
 
+    # 3. Получаем выбранное резюме из сохранённых данных
+    resume_id = customer.get("selected_resume_id")
+    if not resume_id:
+        return jsonify({"error": "Резюме не выбрано. Выберите его на странице клиента."}), 400
 
-    # 3. Получаем резюме
+    # (необязательно, но желательно: проверим, что такое резюме всё ещё существует)
     resumes_resp = requests.get("https://api.hh.ru/resumes/mine", headers=headers)
-    resumes = resumes_resp.json().get("items", [])
-    if not resumes:
-        return jsonify({"error": "Нет доступных резюме"}), 400
+    if resumes_resp.status_code != 200:
+        return jsonify({"error": "Не удалось проверить список резюме"}), 500
 
-    resume_id = resumes[0]["id"]
+    resumes = resumes_resp.json().get("items", [])
+    resume_ids = [r["id"] for r in resumes]
+    if resume_id not in resume_ids:
+        return jsonify({"error": "Сохранённое резюме больше не существует. Выберите заново."}), 400
 
     # 4. Проверка подходящих резюме
     suitable_resp = requests.get(vacancy.get("suitable_resumes_url"), headers=headers)
@@ -308,6 +314,26 @@ def respond_to_vacancy():
             "status": apply_resp.status_code,
             "body": apply_resp.text
         }), 500
+
+
+@app.route("/select_resume", methods=["POST"])
+def select_resume():
+    from auth_utils import load_auth_data, save_auth_data
+    customer_id = request.form.get("customer_id")
+    resume_id = request.form.get("resume_id")
+
+    if not customer_id or not resume_id:
+        return "❌ Отсутствует customer_id или resume_id", 400
+
+    data = load_auth_data()
+    if customer_id not in data:
+        return f"❌ Клиент {customer_id} не найден", 404
+
+    data[customer_id]["selected_resume_id"] = resume_id
+    save_auth_data(data)
+
+    print(f"✅ Сохранён выбор резюме {resume_id} для клиента {customer_id}")
+    return redirect(f"/search?customer_id={customer_id}")
 
 
 

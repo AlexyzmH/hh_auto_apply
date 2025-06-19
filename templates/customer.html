@@ -19,11 +19,11 @@
                 <p class="font-semibold">{{ resume.title }}</p>
                 <p class="text-sm text-gray-600">ID: {{ resume.id }}</p>
               </div>
-              <form method="get" action="/search">
+              <form method="post" action="/select_resume">
                 <input type="hidden" name="customer_id" value="{{ customer_id }}">
                 <input type="hidden" name="resume_id" value="{{ resume.id }}">
                 <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                  🔍 Выбрать
+                  ✅ Выбрать
                 </button>
               </form>
             </div>
