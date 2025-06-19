@@ -141,38 +141,43 @@ def get_vacancies():
         "HH-User-Agent": "SmartApply/1.0 (joopsasakomarov37@yahoo.com)"
     }
 
-    # Формируем параметры для запроса
-    params = {}
-    for key in [
+    # Поддерживаемые поля (одиночные)
+    allowed_keys = [
         "text", "area", "not_word", "specialization", "experience",
         "employment", "schedule", "salary"
-    ]:
+    ]
+
+    params = {}
+
+    # Одиночные поля
+    for key in allowed_keys:
         val = request.args.get(key)
         if val:
             params[key] = val
 
-    # Обработка множественных полей search_field
+    # Обработка поля search_field — используем только ОДНО значение
     search_fields = request.args.getlist("search_field")
-    for field in search_fields:
-        params.setdefault("search_field", []).append(field)
+    if search_fields:
+        params["search_field"] = search_fields[0]  # только первый
 
-    # Обработка чекбокса only_with_salary
+    # Обработка only_with_salary
     if request.args.get("only_with_salary") == "true":
         params["only_with_salary"] = "true"
 
-    # Преобразуем массив search_field → множественные query params
-    search_query = []
-    for k, v in params.items():
-        if isinstance(v, list):
-            for item in v:
-                search_query.append((k, item))
-        else:
-            search_query.append((k, v))
+    # Добавим per_page
+    params["per_page"] = 50
 
-    search_query.append(("per_page", 50))
+    print("🔍 Параметры поиска:", params)
 
-    resp = requests.get("https://api.hh.ru/vacancies", headers=headers, params=search_query)
+    # Запрос к HH API
+    resp = requests.get("https://api.hh.ru/vacancies", headers=headers, params=params)
+
+    if resp.status_code != 200:
+        print("❌ Ошибка поиска:", resp.status_code, resp.text)
+        return jsonify({"error": "Ошибка при поиске", "status": resp.status_code}), resp.status_code
+
     return jsonify(resp.json())
+
 
 
 @app.route("/delete/<customer_id>", methods=["POST"])
