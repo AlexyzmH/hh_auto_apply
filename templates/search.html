@@ -278,30 +278,68 @@ function closeRegionModal() {
 function renderRegionTree(data) {
   const tree = document.getElementById('region-tree');
   tree.innerHTML = '';
+
+  const allLabels = [];
+
   for (const country of data) {
-    if (country.name !== 'Россия') continue; // Только Россия
+    if (country.name !== 'Россия') continue;
+
+    const specialCities = [];
 
     for (const region of country.areas) {
+      if (region.areas.length === 0) {
+        // Города без подрегионов — типа Москва
+        specialCities.push(region);
+        continue;
+      }
+
       const regionItem = document.createElement('li');
       regionItem.innerHTML = `
         <details>
           <summary class="cursor-pointer font-semibold">${region.name}</summary>
           <ul class="ml-4 mt-1 space-y-1">
-            ${region.areas.map(city => `
-              <li>
-                <label class="inline-flex items-center space-x-2">
-                  <input type="radio" name="area-select" value="${city.id}" onclick="selectArea('${city.id}', '${city.name}')">
-                  <span>${city.name}</span>
-                </label>
-              </li>
-            `).join('')}
+            ${region.areas.map(city => {
+              const id = city.id, name = city.name;
+              allLabels.push({ id, name });
+              return `
+                <li>
+                  <label class="inline-flex items-center space-x-2">
+                    <input type="radio" name="area-select" value="${id}" onclick="selectArea('${id}', '${name}')">
+                    <span>${name}</span>
+                  </label>
+                </li>
+              `;
+            }).join('')}
           </ul>
         </details>
       `;
       tree.appendChild(regionItem);
     }
+
+    // Добавим Москву, СПб и т.п. в начале
+    if (specialCities.length > 0) {
+      const fixedGroup = document.createElement('ul');
+      fixedGroup.className = 'mb-3';
+      fixedGroup.innerHTML = specialCities.map(city => {
+        const id = city.id, name = city.name;
+        allLabels.push({ id, name });
+        return `
+          <li>
+            <label class="inline-flex items-center space-x-2">
+              <input type="radio" name="area-select" value="${id}" onclick="selectArea('${id}', '${name}')">
+              <span>${name}</span>
+            </label>
+          </li>
+        `;
+      }).join('');
+      tree.prepend(fixedGroup);
+    }
+
+    // Сохраняем ссылки на все label-элементы для поиска
+    window.__allLabels = allLabels;
   }
 }
+
 
 function selectArea(id, name) {
   selectedRegion = { id, name };
@@ -312,12 +350,14 @@ function selectArea(id, name) {
 
 document.getElementById('region-search').addEventListener('input', function () {
   const query = this.value.toLowerCase();
-  const labels = document.querySelectorAll('#region-tree label span');
-  labels.forEach(label => {
-    const li = label.closest('li');
-    li.style.display = label.textContent.toLowerCase().includes(query) ? '' : 'none';
+  const spans = document.querySelectorAll('#region-tree label span');
+
+  spans.forEach(span => {
+    const match = span.textContent.toLowerCase().includes(query);
+    span.closest('li').style.display = match ? '' : 'none';
   });
 });
+
 </script>
 
 
