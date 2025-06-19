@@ -108,6 +108,7 @@
         <div class="bg-white max-h-[80vh] w-[90vw] max-w-2xl overflow-y-auto rounded shadow-lg p-4 relative">
           <button onclick="closeRegionModal()" class="absolute top-2 right-2 text-gray-500 hover:text-black">✖</button>
           <h2 class="text-xl font-bold mb-2">Выберите регион</h2>
+          <input type="text" id="region-search" placeholder="Поиск..." class="w-full p-2 border mb-4 rounded">
 
           <ul id="region-tree" class="space-y-1 text-sm text-gray-800"></ul>
         </div>
@@ -261,19 +262,6 @@
 </script>
 
 <script>
-let areaData = [];
-let selectedRegion = null;
-
-async function loadRegions() {
-  const res = await fetch("https://api.hh.ru/areas");
-  areaData = await res.json();
-  renderRegionTree(areaData);
-}
-
-function openRegionModal() {
-  document.getElementById('region-modal').classList.remove('hidden');
-  if (!areaData.length) loadRegions();
-}
 
 function closeRegionModal() {
   document.getElementById('region-modal').classList.add('hidden');
