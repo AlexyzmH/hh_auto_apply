@@ -165,7 +165,7 @@ def get_vacancies():
         params["only_with_salary"] = "true"
 
     # Добавим per_page
-    params["per_page"] = 50
+    params["per_page"] = 100
 
     print("🔍 Параметры поиска:", params)
 
