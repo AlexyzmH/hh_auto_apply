@@ -106,9 +106,9 @@
       <!-- 🗺️ Модалка -->
       <div id="region-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden z-50 flex items-center justify-center">
         <div class="bg-white max-h-[80vh] w-[90vw] max-w-2xl overflow-y-auto rounded shadow-lg p-4 relative">
-          <button onclick="closeRegionModal()" class="absolute top-2 right-2 text-gray-500 hover:text-black">✖</button>
+          <button type="button" onclick="closeRegionModal()" class="absolute top-2 right-2 text-gray-500 hover:text-black">✖</button>
           <h2 class="text-xl font-bold mb-2">Выберите регион</h2>
-          <input type="text" id="region-search" placeholder="Поиск..." class="w-full p-2 border mb-4 rounded">
+          <!--<input type="text" id="region-search" placeholder="Поиск..." class="w-full p-2 border mb-4 rounded"> -->
 
           <ul id="region-tree" class="space-y-1 text-sm text-gray-800"></ul>
         </div>
@@ -116,14 +116,19 @@
 
       <div>
         <label class="block font-medium">Сопроводительные письма (до 3):</label>
-        <textarea name="cover_letters" rows="6" class="w-full mt-1 p-2 border rounded" placeholder="Введите до 3 писем, разделяя их с помощью ---"></textarea>
-        <p class="text-sm text-gray-500 mt-1">Разделяйте письма с помощью `---`. Одно из них будет выбрано случайно при отклике.</p>
+        <textarea name="cover_letters" rows="6" class="w-full mt-1 p-2 border rounded" placeholder="Введите сопровидетельное письмо ---"></textarea>
+        <!--<p class="text-sm text-gray-500 mt-1">Разделяйте письма с помощью `---`. Одно из них будет выбрано случайно при отклике.</p> -->
       </div>
 
 
       <div>
         <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Поиск</button>
       </div>
+
+      <div class="mt-4">
+        <a href="/customer/{{ customer_id }}" class="text-blue-600 hover:underline">← Назад к выбору резюме</a>
+      </div>
+
     </form>
 
     <div class="mt-8">
@@ -421,9 +426,7 @@ document.getElementById('region-search').addEventListener('input', function () {
 document.addEventListener("DOMContentLoaded", () => {
   const textarea = document.querySelector('textarea[name="cover_letters"]');
   if (textarea && !textarea.value.trim()) {
-    textarea.value = `Заинтересовала ваша вакансия. Мой опыт соответствует требованиям. Работал Fullstack-разработчиком в Сбер, где развивал комплексные решения и взаимодействовал с различными ---
-Ознакомился с вашей вакансией. Имею необходимые навыки и опыт. В Сбер я занимался разработкой и поддержкой проектов, что позволило мне усовершенствовать свои навыки в Fullstack ---
-Имею опыт работы Fullstack-разработчиком в Сбер, участвовал в проектировании и реализации сложных систем. Готов поделиться своим опытом и обсудить возможное сотрудничество`;
+    textarea.value = `Ознакомился с вашей вакансией. Имею необходимые навыки и опыт. Готов поделиться своим опытом и обсудить возможное сотрудничество`;
   }
 });
 </script>
