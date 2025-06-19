@@ -122,13 +122,17 @@ def customer_dashboard(customer_id):
 
     resumes = resumes_resp.json().get("items", [])
 
-
-    if RESPONSES_FILE.exists():
-        with open(RESPONSES_FILE, "r", encoding="utf-8") as f:
-            all_responses = json.load(f)
-        responses_by_resume = all_responses.get(customer_id, {})
+    if RESPONSES_FILE.exists() and RESPONSES_FILE.stat().st_size > 0:
+        try:
+            with open(RESPONSES_FILE, "r", encoding="utf-8") as f:
+                all_responses = json.load(f)
+        except json.JSONDecodeError:
+            print("⚠️ responses.json повреждён — используем пустой словарь")
+            all_responses = {}
     else:
-        responses_by_resume = {}
+        all_responses = {}
+
+    responses_by_resume = all_responses.get(customer_id, {})
 
     return render_template(
         "customer.html",
