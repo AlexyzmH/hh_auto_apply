@@ -136,8 +136,16 @@
     const formData = new FormData(this);
     const params = new URLSearchParams();
     for (const [key, value] of formData.entries()) {
-      if (value) params.append(key, value);
+    if (key === 'area') {
+      const areaValues = value.split(','); // "1,2,3"
+      for (const a of areaValues) {
+        if (a) params.append('area', a); // ✅ area=1&area=2
+      }
+    } else if (value) {
+      params.append(key, value);
     }
+  }
+
 
     const results = document.getElementById('results');
     results.innerHTML = '<p class="text-gray-500">🔄 Загружаем вакансии...</p>';
@@ -289,48 +297,66 @@ function renderRegionTree(data) {
   const tree = document.getElementById('region-tree');
   tree.innerHTML = '';
 
-  for (const country of data) {
-    if (country.name !== 'Россия') continue;
+  const russia = data.find(c => c.name === 'Россия');
+  const moscow = russia.areas.find(r => r.name === 'Москва');
+  const spb = russia.areas.find(r => r.name === 'Санкт-Петербург');
 
-    for (const region of country.areas) {
-      const regionItem = document.createElement('li');
+  // 👉 Добавляем Москву и СПБ вручную
+  [moscow, spb].forEach(city => {
+    if (!city) return;
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <label class="inline-flex items-center space-x-2">
+        <input type="checkbox" value="${city.id}" onchange="toggleArea('${city.id}', '${city.name}')">
+        <span>${city.name}</span>
+      </label>
+    `;
+    tree.appendChild(li);
+  });
 
-      // Регион без городов (Москва и т.п.)
-      if (region.areas.length === 0) {
-        regionItem.innerHTML = `
-          <label class="inline-flex items-center space-x-2">
-            <input type="checkbox" onchange="toggleArea('${region.id}', '${region.name}')">
-            <span>${region.name}</span>
-          </label>
-        `;
-      } else {
-        regionItem.innerHTML = `
-          <details>
-            <summary class="cursor-pointer font-semibold">${region.name}</summary>
-            <ul class="ml-4 mt-1 space-y-1">
+  // 👉 Остальные регионы
+  for (const region of russia.areas) {
+    if ([moscow.id, spb.id].includes(region.id)) continue;
+
+    const regionItem = document.createElement('li');
+
+    if (region.areas.length === 0) {
+      // Регион без городов
+      regionItem.innerHTML = `
+        <label class="inline-flex items-center space-x-2">
+          <input type="checkbox" value="${region.id}" onchange="toggleArea('${region.id}', '${region.name}')">
+          <span>${region.name}</span>
+        </label>
+      `;
+    } else {
+      // Регион с городами
+      regionItem.innerHTML = `
+        <details>
+          <summary class="cursor-pointer font-semibold">${region.name}</summary>
+          <ul class="ml-4 mt-1 space-y-1">
+            <li>
+              <label class="inline-flex items-center space-x-2">
+                <input type="checkbox" value="${region.id}" onchange="toggleArea('${region.id}', '${region.name}')">
+                <span>📍 ${region.name} (весь регион)</span>
+              </label>
+            </li>
+            ${region.areas.map(city => `
               <li>
                 <label class="inline-flex items-center space-x-2">
-                  <input type="checkbox" onchange="toggleArea('${region.id}', '${region.name}')">
-                  <span>📍 ${region.name} (весь регион)</span>
+                  <input type="checkbox" value="${city.id}" onchange="toggleArea('${city.id}', '${city.name}')">
+                  <span>${city.name}</span>
                 </label>
               </li>
-              ${region.areas.map(city => `
-                <li>
-                  <label class="inline-flex items-center space-x-2">
-                    <input type="checkbox" onchange="toggleArea('${city.id}', '${city.name}')">
-                    <span>${city.name}</span>
-                  </label>
-                </li>
-              `).join('')}
-            </ul>
-          </details>
-        `;
-      }
-
-      tree.appendChild(regionItem);
+            `).join('')}
+          </ul>
+        </details>
+      `;
     }
+
+    tree.appendChild(regionItem);
   }
 }
+
 
 function toggleArea(id, name) {
   const exists = selectedAreas.find(a => a.id === id);
