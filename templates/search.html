@@ -212,46 +212,35 @@
   status.textContent = "⏳ Откликаемся...";
 
   try {
+    const rawLetters = document.querySelector('textarea[name="cover_letters"]')?.value || "";
+    let letters = rawLetters.split('---').map(l => l.trim()).filter(l => l.length > 0);
+    let message = letters.length > 0 ? letters[Math.floor(Math.random() * letters.length)] : null;
+
+    const payload = {
+      customer_id: lastCustomer,
+      vacancy_id: vacancyId
+    };
+    if (message) {
+      payload.message = message;
+    }
+
     const res = await fetch('/respond', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-        // Получаем сопроводительные письма
-      const rawLetters = document.querySelector('textarea[name="cover_letters"]')?.value || "";
-      let letters = rawLetters.split('---').map(l => l.trim()).filter(l => l.length > 0);
-      let message = letters.length > 0 ? letters[Math.floor(Math.random() * letters.length)] : null;
-
-      const payload = {
-        customer_id: lastCustomer,
-        vacancy_id: vacancyId
-      };
-
-      if (message) {
-        payload.message = message;
-      }
-
-      const res = await fetch('/respond', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
+      body: JSON.stringify(payload)
     });
 
     console.log("📡 Status code:", res.status);
-    const text = await res.text(); // читаем как текст, чтобы исключить краш при не-JSON
-    console.log("📦 Ответ текста:", text);
+    const text = await res.text();
 
     let data = {};
     try {
-      data = JSON.parse(text); // если это не JSON — будет пустой
+      data = JSON.parse(text);
     } catch (e) {
       console.log("⚠️ Не JSON тело:", e);
     }
-
 
     if (res.status === 201) {
       status.textContent = "✅ Успешно откликнулись!";
@@ -265,14 +254,11 @@
 
     } else if (res.status === 403) {
       const reason = data?.reason || "";
-
       if (reason === "test_required") {
         status.textContent = "📋 Требуется пройти тест перед откликом";
       } else {
         status.textContent = "⚠️ Вы уже откликались ранее";
-      } //else {
-        //status.textContent = "⛔ Отклик запрещён: резюме не подходит или недоступно";
-      //}
+      }
       status.className = "text-sm text-red-600";
 
     } else if (res.status === 400) {
@@ -290,6 +276,7 @@
     status.className = "text-sm text-red-600";
   }
 }
+
 
 </script>
 
