@@ -6,6 +6,7 @@ from datetime import datetime
 import requests
 import json
 from dotenv import load_dotenv
+from pathlib import Path
 
 app = Flask(__name__)
 
@@ -14,6 +15,7 @@ load_dotenv()
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 REDIRECT_URI = os.getenv("REDIRECT_URI")
+RESPONSES_FILE = Path("responses.json")
 
 
 @app.route("/")
@@ -30,6 +32,13 @@ def login():
         f"&redirect_uri={REDIRECT_URI}"
     )
 
+def format_salary(salary):
+    if not salary:
+        return "Не указана"
+    _from = salary.get("from", "")
+    _to = salary.get("to", "")
+    currency = salary.get("currency", "")
+    return f"{_from} – { _to} {currency}".strip(" –")
 
 @app.route("/auth")
 def auth():
@@ -112,8 +121,22 @@ def customer_dashboard(customer_id):
         return f"Не удалось получить резюме: {resumes_resp.text}", 500
 
     resumes = resumes_resp.json().get("items", [])
-    return render_template("customer.html", customer_id=customer_id, resumes=resumes, username=customer.get("username"))
 
+
+    if RESPONSES_FILE.exists():
+        with open(RESPONSES_FILE, "r", encoding="utf-8") as f:
+            all_responses = json.load(f)
+        responses_by_resume = all_responses.get(customer_id, {})
+    else:
+        responses_by_resume = {}
+
+    return render_template(
+        "customer.html",
+        customer_id=customer_id,
+        resumes=resumes,
+        username=customer.get("username"),
+        responses=responses_by_resume
+    )
 
 
 @app.route("/search")
@@ -279,6 +302,35 @@ def respond_to_vacancy():
 
     # 7. Обработка ответа
     if apply_resp.status_code == 201:
+        # ✅ Сохраняем отклик
+        response_entry = {
+            "vacancy_id": vacancy_id,
+            "name": vacancy.get("name"),
+            "company": vacancy.get("employer", {}).get("name", "Не указано"),
+            "city": vacancy.get("area", {}).get("name", "Не указано"),
+            "salary": format_salary(vacancy.get("salary")),
+            "url": vacancy.get("alternate_url"),
+            "applied_at": datetime.utcnow().isoformat()
+        }
+
+        if RESPONSES_FILE.exists():
+            with open(RESPONSES_FILE, "r", encoding="utf-8") as f:
+                all_data = json.load(f)
+        else:
+            all_data = {}
+
+        customer_block = all_data.get(customer_id, {})
+        resume_block = customer_block.get(resume_id, [])
+
+        # Защита от дубликатов
+        if not any(r["vacancy_id"] == vacancy_id for r in resume_block):
+            resume_block.append(response_entry)
+            customer_block[resume_id] = resume_block
+            all_data[customer_id] = customer_block
+
+            with open(RESPONSES_FILE, "w", encoding="utf-8") as f:
+                json.dump(all_data, f, ensure_ascii=False, indent=2)
+
         return jsonify({"message": "✅ Отклик успешно отправлен!"}), 201
 
     elif apply_resp.status_code == 303:
