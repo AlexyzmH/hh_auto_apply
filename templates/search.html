@@ -87,16 +87,21 @@
         </label>
       </div>
 
-      <!-- 🔍 Кнопка для открытия модалки -->
+      <!-- ✅ Мультивыбор -->
       <div class="mb-4">
         <label class="block font-medium mb-1">Регион:</label>
         <button type="button" onclick="openRegionModal()"
           class="bg-gray-200 px-3 py-2 rounded hover:bg-gray-300">
           📍 Выбрать регион
         </button>
-        <span id="selected-region-label" class="ml-2 text-sm text-gray-600"></span>
-        <input type="hidden" name="area" id="selected-area-id">
-      </div>
+
+        <!-- Теги выбранных -->
+        <div id="selected-region-tags" class="flex flex-wrap gap-2 mt-2 text-sm text-gray-800"></div>
+
+  <!-- Скрытое поле -->
+  <input type="hidden" name="area" id="selected-area-ids">
+</div>
+
 
       <!-- 🗺️ Модалка -->
       <div id="region-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden z-50 flex items-center justify-center">
@@ -274,77 +279,104 @@ function closeRegionModal() {
   document.getElementById('region-modal').classList.add('hidden');
 }
 
+let areaData = [];
+let selectedAreas = []; // массив объектов {id, name}
+
+function openRegionModal() {
+  document.getElementById('region-modal').classList.remove('hidden');
+  if (!areaData.length) loadRegions();
+}
+
+function closeRegionModal() {
+  document.getElementById('region-modal').classList.add('hidden');
+}
+
+async function loadRegions() {
+  const res = await fetch("https://api.hh.ru/areas");
+  areaData = await res.json();
+  renderRegionTree(areaData);
+}
+
 function renderRegionTree(data) {
   const tree = document.getElementById('region-tree');
   tree.innerHTML = '';
 
-  const allLabels = [];
-
   for (const country of data) {
     if (country.name !== 'Россия') continue;
 
-    const specialCities = [];
-
     for (const region of country.areas) {
-      if (region.areas.length === 0) {
-        // Города без подрегионов — типа Москва
-        specialCities.push(region);
-        continue;
-      }
-
       const regionItem = document.createElement('li');
-      regionItem.innerHTML = `
-        <details>
-          <summary class="cursor-pointer font-semibold">${region.name}</summary>
-          <ul class="ml-4 mt-1 space-y-1">
-            ${region.areas.map(city => {
-              const id = city.id, name = city.name;
-              allLabels.push({ id, name });
-              return `
+
+      // Регион без городов (Москва и т.п.)
+      if (region.areas.length === 0) {
+        regionItem.innerHTML = `
+          <label class="inline-flex items-center space-x-2">
+            <input type="checkbox" onchange="toggleArea('${region.id}', '${region.name}')">
+            <span>${region.name}</span>
+          </label>
+        `;
+      } else {
+        regionItem.innerHTML = `
+          <details>
+            <summary class="cursor-pointer font-semibold">${region.name}</summary>
+            <ul class="ml-4 mt-1 space-y-1">
+              <li>
+                <label class="inline-flex items-center space-x-2">
+                  <input type="checkbox" onchange="toggleArea('${region.id}', '${region.name}')">
+                  <span>📍 ${region.name} (весь регион)</span>
+                </label>
+              </li>
+              ${region.areas.map(city => `
                 <li>
                   <label class="inline-flex items-center space-x-2">
-                    <input type="radio" name="area-select" value="${id}" onclick="selectArea('${id}', '${name}')">
-                    <span>${name}</span>
+                    <input type="checkbox" onchange="toggleArea('${city.id}', '${city.name}')">
+                    <span>${city.name}</span>
                   </label>
                 </li>
-              `;
-            }).join('')}
-          </ul>
-        </details>
-      `;
+              `).join('')}
+            </ul>
+          </details>
+        `;
+      }
+
       tree.appendChild(regionItem);
     }
-
-    // Добавим Москву, СПб и т.п. в начале
-    if (specialCities.length > 0) {
-      const fixedGroup = document.createElement('ul');
-      fixedGroup.className = 'mb-3';
-      fixedGroup.innerHTML = specialCities.map(city => {
-        const id = city.id, name = city.name;
-        allLabels.push({ id, name });
-        return `
-          <li>
-            <label class="inline-flex items-center space-x-2">
-              <input type="radio" name="area-select" value="${id}" onclick="selectArea('${id}', '${name}')">
-              <span>${name}</span>
-            </label>
-          </li>
-        `;
-      }).join('');
-      tree.prepend(fixedGroup);
-    }
-
-    // Сохраняем ссылки на все label-элементы для поиска
-    window.__allLabels = allLabels;
   }
 }
 
+function toggleArea(id, name) {
+  const exists = selectedAreas.find(a => a.id === id);
+  if (exists) {
+    selectedAreas = selectedAreas.filter(a => a.id !== id);
+  } else {
+    selectedAreas.push({ id, name });
+  }
+  updateSelectedTags();
+}
 
-function selectArea(id, name) {
-  selectedRegion = { id, name };
-  document.getElementById('selected-area-id').value = id;
-  document.getElementById('selected-region-label').textContent = name;
-  closeRegionModal();
+function updateSelectedTags() {
+  const container = document.getElementById('selected-region-tags');
+  const hiddenInput = document.getElementById('selected-area-ids');
+  container.innerHTML = '';
+
+  for (const area of selectedAreas) {
+    const tag = document.createElement('span');
+    tag.className = 'bg-gray-200 px-2 py-1 rounded flex items-center gap-1';
+    tag.innerHTML = `${area.name}
+      <button type="button" onclick="removeArea('${area.id}')" class="text-red-600 hover:text-red-800">✖</button>`;
+    container.appendChild(tag);
+  }
+
+  hiddenInput.value = selectedAreas.map(a => a.id).join(',');
+}
+
+function removeArea(id) {
+  selectedAreas = selectedAreas.filter(a => a.id !== id);
+  updateSelectedTags();
+
+  // снять чекбокс, если открыт
+  const checkbox = document.querySelector(`#region-tree input[type="checkbox"][value="${id}"]`);
+  if (checkbox) checkbox.checked = false;
 }
 
 document.getElementById('region-search').addEventListener('input', function () {
@@ -356,6 +388,7 @@ document.getElementById('region-search').addEventListener('input', function () {
     span.closest('li').style.display = match ? '' : 'none';
   });
 });
+
 
 </script>
 
