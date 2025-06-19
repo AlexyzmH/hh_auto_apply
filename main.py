@@ -112,7 +112,7 @@ def customer_dashboard(customer_id):
         return f"Не удалось получить резюме: {resumes_resp.text}", 500
 
     resumes = resumes_resp.json().get("items", [])
-    return render_template("customer.html", customer_id=customer_id, resumes=resumes)
+    return render_template("customer.html", customer_id=customer_id, resumes=resumes, username=customer.get("username"))
 
 
 

@@ -7,7 +7,7 @@
 </head>
 <body class="bg-gray-100 text-gray-900 font-sans">
   <div class="container mx-auto p-6">
-    <h1 class="text-2xl font-bold mb-4">👤 Клиент: {{ customer_id }}</h1>
+    <h1 class="text-2xl font-bold mb-4">👤 Клиент: {{ username or customer_id }}</h1>
 
     {% if resumes %}
       <h2 class="text-xl mb-2">Выберите резюме:</h2>
