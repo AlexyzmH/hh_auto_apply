@@ -129,6 +129,13 @@
         <a href="/customer/{{ customer_id }}" class="text-blue-600 hover:underline">← Назад к выбору резюме</a>
       </div>
 
+      <div class="mt-4">
+        <button id="stopButton" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+          🛑 Остановить автоотклики
+        </button>
+      </div>
+
+
     </form>
 
     <div class="mt-8">
@@ -140,6 +147,13 @@
   </div>
 
   <script>
+  let stopAuto = false;
+  document.getElementById("stopButton").addEventListener("click", () => {
+    stopAuto = true;
+    alert("⛔ Отклики остановлены!");
+  });
+
+
   let lastCustomer = document.querySelector('input[name="customer_id"]').value;
 
   document.getElementById('searchForm').addEventListener('submit', async function(e) {
@@ -193,26 +207,24 @@
       card.className = 'border p-4 rounded-lg shadow bg-white';
 
       card.innerHTML = `
-        <h3 class="text-xl font-semibold text-blue-700 hover:underline">
-          <a href="${url}" target="_blank">${v.name}</a>
-        </h3>
-        <p class="text-gray-700">💼 ${company}</p>
-        <p class="text-gray-700">📍 ${city}</p>
-        <p class="text-gray-700">💰 Зарплата: ${salary}</p>
-        <div class="mt-2 flex items-center gap-2">
-          <button class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
-            onclick="respondToVacancy('${vacancyId}')">
-            Откликнуться
-          </button>
-          <span id="respond-status-${vacancyId}" class="text-sm text-gray-500"></span>
-        </div>
-      `;
+      ...
+      <div class="mt-2 text-sm text-gray-500" id="respond-status-${vacancyId}">
+        ⏳ Ожидание отклика...
+      </div>
+    `;
+      setTimeout(() => respondToVacancy(vacancyId), 300 + Math.random() * 500); // чуть-чуть задержка
 
-      results.appendChild(card);
+        results.appendChild(card);
+      }
     }
-  }
 
   async function respondToVacancy(vacancyId) {
+  if (stopAuto) {
+    const status = document.getElementById(`respond-status-${vacancyId}`);
+    if (status) status.textContent = "⏹ Остановлено пользователем";
+    return;
+  }
+
   const status = document.getElementById(`respond-status-${vacancyId}`);
   status.textContent = "⏳ Откликаемся...";
 

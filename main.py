@@ -135,12 +135,15 @@ def customer_dashboard(customer_id):
 
     responses_by_resume = all_responses.get(customer_id, {})
 
+    total_responses = sum(len(resps) for resps in responses_by_resume.values())
+
     return render_template(
         "customer.html",
         customer_id=customer_id,
         resumes=resumes,
         username=customer.get("username"),
-        responses=responses_by_resume
+        responses=responses_by_resume,
+        total_responses = total_responses
     )
 
 
