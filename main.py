@@ -7,6 +7,7 @@ import requests
 import json
 from dotenv import load_dotenv
 from pathlib import Path
+from auth_utils import load_auth_data, save_auth_data
 
 app = Flask(__name__)
 
@@ -192,20 +193,20 @@ def get_vacancies():
     collected = []
 
     # Получим список уже откликнутых ID
-    if RESPONSES_FILE.exists():
-        try:
-            with open(RESPONSES_FILE, "r", encoding="utf-8") as f:
-                all_responses = json.load(f)
-        except json.JSONDecodeError:
-            all_responses = {}
-    else:
-        all_responses = {}
-
     resume_id = customer.get("selected_resume_id")
     applied_ids = set()
+
     if resume_id:
-        customer_block = all_responses.get(customer_id, {})
-        applied_ids = set(item["vacancy_id"] for item in customer_block.get(resume_id, []))
+        negotiations_resp = requests.get(
+            f"https://api.hh.ru/resume/{resume_id}/negotiations",
+            headers=headers
+        )
+        if negotiations_resp.status_code == 200:
+            items = negotiations_resp.json().get("items", [])
+            applied_ids = {item["vacancy"]["id"] for item in items}
+            print(f"✅ Найдено откликов: {len(applied_ids)}")
+        else:
+            print(f"⚠️ Ошибка при запросе negotiations: {negotiations_resp.status_code}")
 
     # Загружаем вакансии постранично
     while len(collected) < target_results:
@@ -235,7 +236,6 @@ def get_vacancies():
 
 @app.route("/delete/<customer_id>", methods=["POST"])
 def delete_customer(customer_id):
-    from auth_utils import load_auth_data, save_auth_data
     data = load_auth_data()
 
     if customer_id in data:
@@ -244,6 +244,20 @@ def delete_customer(customer_id):
         print(f"🗑 Удалён клиент: {customer_id}")
     else:
         print(f"⚠️ Попытка удалить несуществующего клиента: {customer_id}")
+
+    #  Удаляем также отклики из responses.json
+    if RESPONSES_FILE.exists():
+        try:
+            with open(RESPONSES_FILE, "r", encoding="utf-8") as f:
+                all_responses = json.load(f)
+
+            if customer_id in all_responses:
+                del all_responses[customer_id]
+                with open(RESPONSES_FILE, "w", encoding="utf-8") as f:
+                    json.dump(all_responses, f, ensure_ascii=False, indent=2)
+                print(f"🧹 Удалены отклики клиента {customer_id} из responses.json")
+        except Exception as e:
+            print(f"⚠️ Ошибка при очистке responses.json: {e}")
 
     return redirect("/")
 
