@@ -236,9 +236,26 @@ function renderVacancies(vacancies) {
 
 async function runQueue(queue) {
   for (const task of queue) {
-    if (stopAuto) break;
-    await task();
-    await new Promise(res => setTimeout(res, 400 + Math.random() * 300)); // пауза между откликами
+  if (stopAuto) break;
+  await task();
+  await new Promise(res => setTimeout(res, 400 + Math.random() * 300));
+}
+
+// 🛑 После остановки — проставим "Остановлено" на оставшихся
+if (stopAuto) {
+  queue.forEach(fn => {
+    const match = fn.toString().match(/respondToVacancy\((\d+)\)/);
+    if (match) {
+      const vacancyId = match[1];
+      const status = document.getElementById(`respond-status-${vacancyId}`);
+      if (status && status.textContent === "⏳ Ожидание отклика...") {
+        status.textContent = "⏹ Остановлено пользователем";
+        status.className = "text-sm text-gray-500";
+      }
+    }
+  });
+}
+
   }
 
   const results = document.getElementById("results");
