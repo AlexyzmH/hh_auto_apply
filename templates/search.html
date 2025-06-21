@@ -287,6 +287,8 @@ async function runQueue(queue) {
       payload.message = message;
     }
 
+    console.log("📤 Отправка данных на /respond:", payload);
+
     const res = await fetch('/respond', {
       method: 'POST',
       headers: {
@@ -294,6 +296,8 @@ async function runQueue(queue) {
       },
       body: JSON.stringify(payload)
     });
+
+    console.log("📥 Ответ от /respond:", res.status, await res.clone().text());
 
     console.log("📡 Status code:", res.status);
     const text = await res.text();
