@@ -147,13 +147,6 @@
   </div>
 
   <script>
-  let stopAuto = false;
-  document.getElementById("stopButton").addEventListener("click", () => {
-    stopAuto = true;
-    alert("⛔ Отклики остановлены!");
-  });
-
-
   let lastCustomer = document.querySelector('input[name="customer_id"]').value;
 
   document.getElementById('searchForm').addEventListener('submit', async function(e) {
@@ -184,39 +177,77 @@
     }
   });
 
-  function renderVacancies(vacancies) {
-    const results = document.getElementById('results');
-    results.innerHTML = '';
+  let stopAuto = false;
+let successCount = 0;
 
-    if (vacancies.length === 0) {
-      results.innerHTML = '<p class="text-gray-500">🔍 Вакансии не найдены</p>';
-      return;
-    }
+document.addEventListener("DOMContentLoaded", () => {
+  const stopBtn = document.getElementById("stopButton");
+  if (stopBtn) {
+    stopBtn.addEventListener("click", () => {
+      stopAuto = true;
+      alert("🛑 Автоотклики остановлены!");
+    });
+  }
+});
 
-    for (const v of vacancies) {
-      const salary = v.salary ?
-        `${v.salary.from || ''} – ${v.salary.to || ''} ${v.salary.currency}` :
-        'Не указана';
+function renderVacancies(vacancies) {
+  successCount = 0;
+  const results = document.getElementById('results');
+  results.innerHTML = '';
 
-      const company = v.employer?.name || 'Без компании';
-      const city = v.area?.name || 'Город не указан';
-      const url = v.alternate_url || '#';
-      const vacancyId = v.id;
+  if (vacancies.length === 0) {
+    results.innerHTML = '<p class="text-gray-500">🔍 Вакансии не найдены</p>';
+    return;
+  }
 
-      const card = document.createElement('div');
-      card.className = 'border p-4 rounded-lg shadow bg-white';
+  const queue = [];
 
-      card.innerHTML = `
-      ...
+  for (const v of vacancies) {
+    const salary = v.salary
+      ? `${v.salary.from || ''} – ${v.salary.to || ''} ${v.salary.currency}`
+      : 'Не указана';
+    const company = v.employer?.name || 'Без компании';
+    const city = v.area?.name || 'Город не указан';
+    const url = v.alternate_url || '#';
+    const vacancyId = v.id;
+
+    const card = document.createElement('div');
+    card.className = 'border p-4 rounded-lg shadow bg-white';
+    card.innerHTML = `
+      <h3 class="text-xl font-semibold text-blue-700 hover:underline">
+        <a href="${url}" target="_blank">${v.name}</a>
+      </h3>
+      <p class="text-gray-700">💼 ${company}</p>
+      <p class="text-gray-700">📍 ${city}</p>
+      <p class="text-gray-700">💰 Зарплата: ${salary}</p>
       <div class="mt-2 text-sm text-gray-500" id="respond-status-${vacancyId}">
         ⏳ Ожидание отклика...
       </div>
     `;
-      setTimeout(() => respondToVacancy(vacancyId), 300 + Math.random() * 500); // чуть-чуть задержка
+    results.appendChild(card);
 
-        results.appendChild(card);
-      }
-    }
+    // Добавляем в очередь
+    queue.push(() => respondToVacancy(vacancyId));
+  }
+
+  // 🔁 Запускаем очередь
+  runQueue(queue);
+}
+
+async function runQueue(queue) {
+  for (const task of queue) {
+    if (stopAuto) break;
+    await task();
+    await new Promise(res => setTimeout(res, 400 + Math.random() * 300)); // пауза между откликами
+  }
+
+  const results = document.getElementById("results");
+  const finalMsg = document.createElement("p");
+  finalMsg.className = "text-sm text-gray-600 mt-4";
+  finalMsg.textContent = `🏁 Автоотклики завершены. Успешно: ${successCount}`;
+  results.appendChild(finalMsg);
+}
+
 
   async function respondToVacancy(vacancyId) {
   if (stopAuto) {
@@ -262,6 +293,10 @@
     if (res.status === 201) {
       status.textContent = "✅ Успешно откликнулись!";
       status.className = "text-sm text-green-600";
+
+      const card = status.closest('.border');
+      if (card) card.classList.add("ring-2", "ring-green-300");
+      successCount++;
 
     } else if (res.status === 303) {
       const link = data.manual_url || "#";
@@ -421,6 +456,7 @@ function removeArea(id) {
   if (checkbox) checkbox.checked = false;
 }
 
+/*
 document.getElementById('region-search').addEventListener('input', function () {
   const query = this.value.toLowerCase();
   const spans = document.querySelectorAll('#region-tree label span');
@@ -430,6 +466,7 @@ document.getElementById('region-search').addEventListener('input', function () {
     span.closest('li').style.display = match ? '' : 'none';
   });
 });
+*/
 
 
 </script>
