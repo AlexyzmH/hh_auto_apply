@@ -149,33 +149,44 @@
   <script>
   let lastCustomer = document.querySelector('input[name="customer_id"]').value;
 
-  document.getElementById('searchForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const formData = new FormData(this);
-    const params = new URLSearchParams();
-    for (const [key, value] of formData.entries()) {
-    if (key === 'area') {
-      const areaValues = value.split(','); // "1,2,3"
-      for (const a of areaValues) {
-        if (a) params.append('area', a); // ✅ area=1&area=2
+document.getElementById('searchForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  const formData = new FormData(this);
+  const params = new URLSearchParams();
+
+  // Поля, которые могут повторяться (чекбоксы, мультивыбор)
+  const multiFields = ['search_field', 'area'];
+
+  for (const [key, value] of formData.entries()) {
+    if (multiFields.includes(key)) {
+      if (key === 'area') {
+        value.split(',').forEach(a => {
+          if (a) params.append('area', a);
+        });
+      } else {
+        params.append(key, value);  // каждый checkbox по одному
       }
     } else if (value) {
       params.append(key, value);
     }
   }
-    console.log("📦 GET /vacancies?" + params.toString());
 
-    const results = document.getElementById('results');
-    results.innerHTML = '<p class="text-gray-500">🔄 Загружаем вакансии...</p>';
+  console.log("📦 GET /vacancies?" + params.toString());
+  console.log("🧾 Параметры как объект:", Object.fromEntries(params));
 
-    try {
-      const res = await fetch(`/vacancies?${params.toString()}`);
-      const data = await res.json();
-      renderVacancies(data.items || []);
-    } catch (err) {
-      results.innerHTML = '<p class="text-red-600">❌ Ошибка загрузки</p>';
-    }
-  });
+  const results = document.getElementById('results');
+  results.innerHTML = '<p class="text-gray-500">🔄 Загружаем вакансии...</p>';
+
+  try {
+    const res = await fetch(`/vacancies?${params.toString()}`);
+    const data = await res.json();
+    renderVacancies(data.items || []);
+  } catch (err) {
+    results.innerHTML = '<p class="text-red-600">❌ Ошибка загрузки</p>';
+  }
+});
+
 
   let stopAuto = false;
 let successCount = 0;
@@ -287,8 +298,6 @@ async function runQueue(queue) {
       payload.message = message;
     }
 
-    console.log("📤 Отправка данных на /respond:", payload);
-
     const res = await fetch('/respond', {
       method: 'POST',
       headers: {
@@ -296,8 +305,6 @@ async function runQueue(queue) {
       },
       body: JSON.stringify(payload)
     });
-
-    console.log("📥 Ответ от /respond:", res.status, await res.clone().text());
 
     console.log("📡 Status code:", res.status);
     const text = await res.text();
