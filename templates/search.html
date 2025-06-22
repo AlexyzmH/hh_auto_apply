@@ -297,6 +297,8 @@ async function runQueue(queue) {
     if (message) {
       payload.message = message;
     }
+    console.log("📨 Отправляем payload на /respond:", payload);
+
 
     const res = await fetch('/respond', {
       method: 'POST',
