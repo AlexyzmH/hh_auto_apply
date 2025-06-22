@@ -389,6 +389,7 @@ def respond_to_vacancy():
 
 
 
+
     elif apply_resp.status_code == 403:
         try:
             error_json = apply_resp.json()
@@ -398,23 +399,17 @@ def respond_to_vacancy():
                     "error": "📋 Для этой вакансии нужно пройти тест",
                     "reason": "test_required"
                 }), 403
+
             elif error_value == "limit_exceeded":
                 return jsonify({
-                    "error": "🚫 Превышен лимит откликов на сегодня на hh.ru",
+                    "error": "📛 Превышен дневной лимит откликов. Попробуйте завтра.",
                     "reason": "limit_exceeded"
-                }), 403
-
-            elif error_value == "already_applied":
-                return jsonify({
-                    "error": "⚠️ Вы уже откликались на эту вакансию",
-                    "reason": "already_applied"
                 }), 403
 
             else:
                 return jsonify({
-                    "error": "⛔ Отклик запрещён",
-                    "reason": error_value or "unknown",
-                    "details": error_json
+                    "error": "⚠️ Вы уже откликались на эту вакансию",
+                    "reason": "already_applied"
                 }), 403
 
         except Exception as e:
