@@ -337,6 +337,8 @@ async function runQueue(queue) {
       const reason = data?.reason || "";
       if (reason === "test_required") {
         status.textContent = "📋 Требуется пройти тест перед откликом";
+      } else if (reason === "limit_exceeded") {
+        status.textContent = "📛 Превышен дневной лимит откликов. Попробуйте завтра.";
       } else {
         status.textContent = "⚠️ Вы уже откликались ранее";
       }

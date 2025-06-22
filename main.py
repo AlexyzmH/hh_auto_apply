@@ -386,10 +386,6 @@ def respond_to_vacancy():
             "manual_url": vacancy.get("apply_alternate_url")
         }), 303
 
-
-
-
-
     elif apply_resp.status_code == 403:
         try:
             error_json = apply_resp.json()
@@ -425,8 +421,27 @@ def respond_to_vacancy():
                 #"reason": error_value or "unknown",
                 #"details": error_json
             #}), 403
-
-
+    elif apply_resp.status_code == 400:
+        try:
+            error_json = apply_resp.json()
+            error_value = error_json.get("errors", [{}])[0].get("value", "")
+            if error_value == "limit_exceeded":
+                return jsonify({
+                    "error": "📛 Превышен дневной лимит откликов. Попробуйте завтра.",
+                    "reason": "limit_exceeded"
+                }), 403
+            else:
+                return jsonify({
+                    "error": "❌ Неверный запрос",
+                    "reason": error_value or "unknown",
+                    "details": error_json
+                }), 400
+        except Exception as e:
+            return jsonify({
+                "error": "Ошибка при разборе тела 400 ошибки",
+                "raw": apply_resp.text,
+                "parse_error": str(e)
+            }), 400
 
     else:
         return jsonify({
