@@ -312,6 +312,7 @@ async function runQueue(queue) {
     let data = {};
     try {
       data = JSON.parse(text);
+      console.log("⚠️ Ответ от сервера:", data);
     } catch (e) {
       console.log("⚠️ Не JSON тело:", e);
     }
@@ -340,7 +341,7 @@ async function runQueue(queue) {
       status.className = "text-sm text-red-600";
 
     } else if (res.status === 400) {
-      status.textContent = `❌ Неверный запрос: ${data?.error || 'Проверь резюме'}`;
+      status.textContent = `❌ Неверный запрос: ${JSON.stringify(data?.error) || 'Проверь резюме'}`;
       status.className = "text-sm text-red-600";
 
     } else {
