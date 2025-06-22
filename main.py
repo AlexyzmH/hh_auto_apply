@@ -388,30 +388,33 @@ def respond_to_vacancy():
 
 
 
-    elif apply_resp.status_code == 400:
-        print("❌ Ошибка 400. Ответ от сервера:")
-        print(apply_resp.text)
-        try:
-            error_data = apply_resp.json()
-        except Exception as e:
-            error_data = {"raw": apply_resp.text, "parse_error": str(e)}
-        return jsonify({"error": error_data}), 400
 
     elif apply_resp.status_code == 403:
         try:
             error_json = apply_resp.json()
             error_value = error_json.get("errors", [{}])[0].get("value", "")
-
             if error_value == "test_required":
                 return jsonify({
                     "error": "📋 Для этой вакансии нужно пройти тест",
                     "reason": "test_required"
                 }), 403
+            elif error_value == "limit_exceeded":
+                return jsonify({
+                    "error": "🚫 Превышен лимит откликов на сегодня на hh.ru",
+                    "reason": "limit_exceeded"
+                }), 403
 
-            else:
+            elif error_value == "already_applied":
                 return jsonify({
                     "error": "⚠️ Вы уже откликались на эту вакансию",
                     "reason": "already_applied"
+                }), 403
+
+            else:
+                return jsonify({
+                    "error": "⛔ Отклик запрещён",
+                    "reason": error_value or "unknown",
+                    "details": error_json
                 }), 403
 
         except Exception as e:
