@@ -86,6 +86,7 @@
 <script>
 let stopAuto = false;
 async function startSearchAndApply(customerId, resumeId) {
+  console.log("🚀 startSearchAndApply() запущена для резюме:", resumeId);
   const container = document.getElementById(`responses-${resumeId}`);
   if (!container) return;
 
@@ -139,6 +140,7 @@ async function startSearchAndApply(customerId, resumeId) {
       });
 
       const resData = await respondRes.json();
+      console.log("📦 Ответ от /respond:", resData);
       const entry = resData.entry;
 
       const statusColor =
