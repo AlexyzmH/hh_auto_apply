@@ -59,6 +59,13 @@
     </button>
 
     <button
+      onclick="openSearchSettings('{{ resume.id }}', '{{ resume.title }}', '{{ resume.area.name if resume.area }}')"
+      class="ml-2 bg-gray-300 text-black px-3 py-2 rounded hover:bg-gray-400">
+      ⚙️ Настройки поиска
+    </button>
+
+
+    <button
       onclick="stopAuto = true"
       class="ml-2 bg-red-600 text-white px-3 py-2 rounded hover:bg-red-700">
       🛑 Остановить
@@ -79,7 +86,41 @@
     <div class="mt-6">
       <a href="/" class="text-blue-600 hover:underline">← Назад</a>
     </div>
+
+
+
   </div>
+<div id="search-settings-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden z-50 flex items-center justify-center">
+  <div class="bg-white w-full max-w-xl p-6 rounded shadow relative">
+    <button onclick="closeSearchSettings()" class="absolute top-2 right-2 text-gray-500 hover:text-black">✖</button>
+    <h2 class="text-xl font-bold mb-4">⚙️ Настройки поиска</h2>
+
+    <div class="space-y-4">
+      <div>
+        <label class="block font-medium">Ключевые слова:</label>
+        <input type="text" id="search-text" class="w-full mt-1 p-2 border rounded">
+      </div>
+
+      <div>
+        <label class="block font-medium">Город (area name):</label>
+        <input type="text" id="search-area-name" disabled class="w-full mt-1 p-2 border bg-gray-100 rounded">
+      </div>
+
+      <div>
+        <label class="inline-flex items-center">
+          <input type="checkbox" id="search-only-with-salary" class="mr-2">
+          Только с указанной зарплатой
+        </label>
+      </div>
+    </div>
+
+    <div class="mt-6 flex justify-end">
+      <button onclick="closeSearchSettings()" class="mr-3 bg-gray-300 px-4 py-2 rounded hover:bg-gray-400">Отмена</button>
+      <button onclick="saveSearchSettings()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Сохранить</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
 
@@ -106,7 +147,13 @@ async function startSearchAndApply(customerId, resumeId) {
   });
 
   // Получаем вакансии
-  const res = await fetch(`/vacancies?customer_id=${customerId}`);
+  let searchParams = new URLSearchParams({ customer_id: customerId });
+  const settings = searchSettingsByResume[resumeId];
+  if (settings?.text) searchParams.append("text", settings.text);
+  if (settings?.only_with_salary) searchParams.append("only_with_salary", "true");
+
+  const res = await fetch(`/vacancies?${searchParams.toString()}`);
+
   const data = await res.json();
   const items = data.items || [];
 
@@ -188,4 +235,27 @@ async function startSearchAndApply(customerId, resumeId) {
 }
 </script>
 
+<script>
+let searchSettingsByResume = {};  // ключ: resumeId, значение: {text, onlyWithSalary}
+
+function openSearchSettings(resumeId, title, areaName) {
+  document.getElementById("search-text").value = searchSettingsByResume[resumeId]?.text || title;
+  document.getElementById("search-only-with-salary").checked = searchSettingsByResume[resumeId]?.only_with_salary || false;
+  document.getElementById("search-area-name").value = areaName || "Не указан";
+  document.getElementById("search-settings-modal").dataset.resumeId = resumeId;
+  document.getElementById("search-settings-modal").classList.remove("hidden");
+}
+
+function closeSearchSettings() {
+  document.getElementById("search-settings-modal").classList.add("hidden");
+}
+
+function saveSearchSettings() {
+  const resumeId = document.getElementById("search-settings-modal").dataset.resumeId;
+  const text = document.getElementById("search-text").value.trim();
+  const onlyWithSalary = document.getElementById("search-only-with-salary").checked;
+  searchSettingsByResume[resumeId] = { text, only_with_salary: onlyWithSalary };
+  closeSearchSettings();
+}
+</script>
 
