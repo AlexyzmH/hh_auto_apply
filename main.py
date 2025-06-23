@@ -114,7 +114,8 @@ def customer_dashboard(customer_id):
 
     headers = {
         "Authorization": f"Bearer {customer['access_token']}",
-        "HH-User-Agent": "SmartApply/1.0 (joopsasakomarov37@yahoo.com)"
+        "HH-User-Agent": "SmartApply/1.0 (joopsasakomarov37@yahoo.com)",
+        "Content-Type": "application/x-www-form-urlencoded"
     }
 
     resumes_resp = requests.get("https://api.hh.ru/resumes/mine", headers=headers)
@@ -169,7 +170,8 @@ def get_vacancies():
 
     headers = {
         "Authorization": f"Bearer {access_token}",
-        "HH-User-Agent": "SmartApply/1.0 (joopsasakomarov37@yahoo.com)"
+        "HH-User-Agent": "SmartApply/1.0 (joopsasakomarov37@yahoo.com)",
+        "Content-Type": "application/x-www-form-urlencoded"
     }
 
     allowed_keys = [
@@ -281,7 +283,9 @@ def respond_to_vacancy():
 
     headers = {
         "Authorization": f"Bearer {access_token}",
-        "HH-User-Agent": "SmartApply/1.0"
+        "HH-User-Agent": "SmartApply/1.0 (joopsasakomarov37@yahoo.com)",
+        "Content-Type": "application/x-www-form-urlencoded"
+
     }
 
     # Получаем вакансию
