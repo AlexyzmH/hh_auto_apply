@@ -114,8 +114,7 @@ def customer_dashboard(customer_id):
 
     headers = {
         "Authorization": f"Bearer {customer['access_token']}",
-        "HH-User-Agent": "SmartApply/1.0 (joopsasakomarov37@yahoo.com)",
-        "Content-Type": "application/x-www-form-urlencoded"
+        "HH-User-Agent": "SmartApply/1.0 (joopsasakomarov37@yahoo.com)"
     }
 
     resumes_resp = requests.get("https://api.hh.ru/resumes/mine", headers=headers)
@@ -170,8 +169,7 @@ def get_vacancies():
 
     headers = {
         "Authorization": f"Bearer {access_token}",
-        "HH-User-Agent": "SmartApply/1.0 (joopsasakomarov37@yahoo.com)",
-        "Content-Type": "application/x-www-form-urlencoded"
+        "HH-User-Agent": "SmartApply/1.0 (joopsasakomarov37@yahoo.com)"
     }
 
     allowed_keys = [
@@ -283,9 +281,7 @@ def respond_to_vacancy():
 
     headers = {
         "Authorization": f"Bearer {access_token}",
-        "HH-User-Agent": "SmartApply/1.0 (joopsasakomarov37@yahoo.com)",
-        "Content-Type": "application/x-www-form-urlencoded"
-
+        "HH-User-Agent": "SmartApply/1.0"
     }
 
     # Получаем вакансию
@@ -339,14 +335,20 @@ def respond_to_vacancy():
         else:
             try:
                 error_json = apply_resp.json()
-                print("🛑 Ошибка при отклике — ответ HH:", error_json)
-                reason = error_json.get("errors", [{}])[0].get("value", "unknown")
+                print("🛑 Ошибка при отклике — JSON ответ HH:", json.dumps(error_json, indent=2, ensure_ascii=False))
+                reason = (
+                        error_json.get("errors", [{}])[0].get("value") or
+                        error_json.get("description") or
+                        error_json.get("error") or
+                        "unknown"
+                )
                 message = reason
             except Exception as e:
-                print("❌ Ошибка при разборе ошибки HH:", str(e))
+                print("❌ Ошибка при разборе JSON:", str(e))
                 print("📦 Raw response text:", apply_resp.text)
-                reason = "unknown"
-                message = "Неизвестная ошибка"
+                with open("last_error.html", "w", encoding="utf-8") as f:
+                    f.write(apply_resp.text)
+                message = "Невозможно распарсить ответ от HH"
             status = "fail"
 
     # 📦 Собираем response_entry и сохраняем
