@@ -59,7 +59,7 @@
     </button>
 
     <button
-      onclick="openSearchSettings('{{ resume.id }}', '{{ resume.title }}', '{{ resume.area.name if resume.area }}')"
+      onclick="openSearchSettings('{{ resume.id }}', '{{ resume.title }}', '{{ resume.area.id if resume.area }}', '{{ resume.area.name if resume.area }}')"
       class="ml-2 bg-gray-300 text-black px-3 py-2 rounded hover:bg-gray-400">
       ⚙️ Настройки поиска
     </button>
@@ -383,11 +383,18 @@ async function startSearchAndApply(customerId, resumeId) {
 <script>
 let searchSettingsByResume = {};  // ключ: resumeId, значение: {text, onlyWithSalary}
 
-function openSearchSettings(resumeId, title, areaName) {
+function openSearchSettings(resumeId, title, areaId, areaName) {
   document.getElementById("search-text").value = searchSettingsByResume[resumeId]?.text || title;
-  document.getElementById("search-area-name").value = areaName || "Не указан";
   document.getElementById("search-settings-modal").dataset.resumeId = resumeId;
   document.getElementById("search-settings-modal").classList.remove("hidden");
+
+  if (areaId && !selectedAreas.find(a => a.id === areaId)) {
+    selectedAreas.push({ id: areaId, name: areaName });
+    updateSelectedTags();
+    // Подставим в чекбокс (если дерево уже отрисовано)
+    const checkbox = document.querySelector(`#region-tree input[type="checkbox"][value="${areaId}"]`);
+    if (checkbox) checkbox.checked = true;
+  }
 }
 
 function closeSearchSettings() {
@@ -401,7 +408,6 @@ function saveSearchSettings() {
 
   searchSettingsByResume[resumeId] = {
     text,
-    only_with_salary: onlyWithSalary,
   };
 
   if (areaIds) {
