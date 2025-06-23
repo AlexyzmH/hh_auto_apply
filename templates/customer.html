@@ -53,7 +53,7 @@
     <div id="search-results" class="mt-6 space-y-4"></div>
 
     <button
-      onclick="startSearchAndApply('{{ customer_id }}', '{{ resume.id }}')"
+      onclick="startSearchAndApply('{{ customer_id }}', '{{ resume.id }}', '{{ resume.area.id if resume.area }}')"
       class="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700">
       🔍 Искать и откликнуться
     </button>
@@ -126,7 +126,7 @@
 
 <script>
 let stopAuto = false;
-async function startSearchAndApply(customerId, resumeId) {
+async function startSearchAndApply(customerId, resumeId, areaId) {
   console.log("🚀 startSearchAndApply() запущена для резюме:", resumeId);
   const container = document.getElementById(`responses-${resumeId}`);
   if (!container) return;
@@ -148,6 +148,9 @@ async function startSearchAndApply(customerId, resumeId) {
 
   // Получаем вакансии
   let searchParams = new URLSearchParams({ customer_id: customerId });
+  if (areaId) {
+    searchParams.append("area", areaId);
+  }
   const settings = searchSettingsByResume[resumeId];
   if (settings?.text) searchParams.append("text", settings.text);
   if (settings?.only_with_salary) searchParams.append("only_with_salary", "true");
