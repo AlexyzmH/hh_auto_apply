@@ -41,12 +41,12 @@
 
     <div id="search-results" class="mt-6 space-y-4"></div>
 
-    <form method="POST" action="/start_search">
-      <input type="hidden" name="customer_id" value="{{ customer_id }}">
-      <input type="hidden" name="resume_id" value="{{ resume.id }}">
-      <button type="submit" class="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700">
-        🔍 Искать и откликнуться
-      </button>
+    <button
+      onclick="startSearchAndApply('{{ customer_id }}', '{{ resume.id }}')"
+      class="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700">
+      🔍 Искать и откликнуться
+    </button>
+
     </form>
 
   </div>
@@ -65,79 +65,73 @@
 </body>
 </html>
 
-{% if triggered_search %}
 <script>
-  document.addEventListener("DOMContentLoaded", () => {
-    startSearchAndApply();
+async function startSearchAndApply(customerId, resumeId) {
+  const resultsContainer = document.getElementById("search-results");
+  resultsContainer.innerHTML = '<p class="text-gray-500">🔄 Ищем вакансии и откликаемся...</p>';
+
+  // Установим выбранное резюме
+  await fetch("/select_resume", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      customer_id: customerId,
+      resume_id: resumeId
+    })
   });
 
-  async function startSearchAndApply() {
-    const customerId = "{{ customer_id }}";
-    const response = await fetch(`/vacancies?customer_id=${customerId}`);
-    const data = await response.json();
+  // Загружаем вакансии
+  const res = await fetch(`/vacancies?customer_id=${customerId}`);
+  const data = await res.json();
+  const items = data.items || [];
 
-    const resultsContainer = document.getElementById("search-results");
-    resultsContainer.innerHTML = "";
+  resultsContainer.innerHTML = '';
 
-    if (!data.items || data.items.length === 0) {
-      resultsContainer.innerHTML = '<p class="text-gray-500">🔍 Вакансии не найдены</p>';
-      return;
-    }
+  if (items.length === 0) {
+    resultsContainer.innerHTML = '<p class="text-gray-500">❌ Вакансии не найдены</p>';
+    return;
+  }
 
-    for (const vacancy of data.items) {
-      const card = document.createElement("div");
-      card.className = "border p-4 rounded shadow bg-white";
+  for (const v of items) {
+    const card = document.createElement("div");
+    const salary = v.salary
+      ? `${v.salary.from || ''} – ${v.salary.to || ''} ${v.salary.currency || ''}`
+      : "Не указана";
 
-      const salary = vacancy.salary
-        ? `${vacancy.salary.from || ""} – ${vacancy.salary.to || ""} ${vacancy.salary.currency || ""}`
-        : "Не указана";
+    card.className = "border p-4 rounded shadow bg-white";
+    card.innerHTML = `
+      <h3 class="text-lg font-bold text-blue-700"><a href="${v.alternate_url}" target="_blank">${v.name}</a></h3>
+      <p>💼 ${v.employer?.name || 'Без компании'}</p>
+      <p>📍 ${v.area?.name || 'Не указано'}</p>
+      <p>💰 ${salary}</p>
+      <div class="mt-2 text-sm text-gray-500" id="status-${v.id}">⏳ Откликаемся...</div>
+    `;
+    resultsContainer.appendChild(card);
 
-      card.innerHTML = `
-        <h3 class="text-lg font-bold text-blue-700">
-          <a href="${vacancy.alternate_url}" target="_blank">${vacancy.name}</a>
-        </h3>
-        <p>💼 ${vacancy.employer?.name || "Без компании"}</p>
-        <p>📍 ${vacancy.area?.name || "Город не указан"}</p>
-        <p>💰 ${salary}</p>
-        <div class="mt-2 text-sm text-gray-500" id="status-${vacancy.id}">⏳ Откликаемся...</div>
-      `;
-
-      resultsContainer.appendChild(card);
-
-      // Автоотклик
-      const payload = {
+    // Отклик
+    const respondRes = await fetch("/respond", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         customer_id: customerId,
-        vacancy_id: vacancy.id
-      };
+        vacancy_id: v.id
+      })
+    });
 
-      try {
-        const res = await fetch("/respond", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
+    const statusEl = document.getElementById(`status-${v.id}`);
+    const resData = await respondRes.json();
 
-        const statusEl = document.getElementById(`status-${vacancy.id}`);
-        const resData = await res.json();
-
-        if (res.status === 201) {
-          statusEl.textContent = "✅ Успешно откликнулись!";
-          statusEl.className = "text-green-600";
-        } else if (res.status === 303) {
-          statusEl.innerHTML = `🔀 Ручной отклик: <a href="${resData.manual_url}" class="text-blue-600 underline" target="_blank">Перейти</a>`;
-          statusEl.className = "text-yellow-600";
-        } else {
-          statusEl.textContent = `❌ ${resData.error || "Ошибка"}`;
-          statusEl.className = "text-red-600";
-        }
-      } catch (e) {
-        console.error("❌ Ошибка отклика:", e);
-        const statusEl = document.getElementById(`status-${vacancy.id}`);
-        statusEl.textContent = "❌ Сетевая ошибка";
-        statusEl.className = "text-red-600";
-      }
+    if (respondRes.status === 201) {
+      statusEl.textContent = "✅ Успешно откликнулись";
+      statusEl.className = "text-green-600 text-sm";
+    } else if (respondRes.status === 303) {
+      statusEl.innerHTML = `🔀 Ручной отклик: <a href="${resData.manual_url}" target="_blank" class="text-blue-600 underline">Перейти</a>`;
+      statusEl.className = "text-yellow-600 text-sm";
+    } else {
+      statusEl.textContent = `❌ ${resData.error || 'Ошибка'}`;
+      statusEl.className = "text-red-600 text-sm";
     }
   }
+}
 </script>
-{% endif %}
 

@@ -19,27 +19,6 @@ REDIRECT_URI = os.getenv("REDIRECT_URI")
 RESPONSES_FILE = Path("responses.json")
 
 
-@app.route("/start_search", methods=["POST"])
-def start_search():
-    customer_id = request.form.get("customer_id")
-    resume_id = request.form.get("resume_id")
-
-    if not customer_id or not resume_id:
-        return "❌ Не хватает customer_id или resume_id", 400
-
-    from auth_utils import load_auth_data, save_auth_data
-
-    auth_data = load_auth_data()
-    customer = auth_data.get(customer_id)
-    if not customer:
-        return "❌ Клиент не найден", 404
-
-    customer["selected_resume_id"] = resume_id
-    save_auth_data(auth_data)
-
-    return render_template("customer.html", customer_id=customer_id, triggered_search=True)
-
-
 @app.route("/")
 def index():
     customers = load_auth_data()
