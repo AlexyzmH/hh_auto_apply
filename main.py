@@ -323,7 +323,7 @@ def respond_to_vacancy():
         apply_resp = requests.post(
             "https://api.hh.ru/negotiations",
             headers=headers,
-            files={k: (None, v) for k, v in form_data.items()}
+            data=form_data
         )
 
         if apply_resp.status_code == 201:
