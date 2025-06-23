@@ -95,7 +95,6 @@
 <!-- Модалка с настройками поиска -->
 <div id="search-settings-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden z-50 flex items-center justify-center">
   <div class="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded shadow relative">
-    <button onclick="closeSearchSettings()" class="absolute top-2 right-2 text-gray-500 hover:text-black">✖</button>
     <h2 class="text-xl font-bold mb-4">⚙️ Настройки поиска</h2>
 
     <div class="space-y-4">
@@ -384,17 +383,30 @@ async function startSearchAndApply(customerId, resumeId) {
 let searchSettingsByResume = {};  // ключ: resumeId, значение: {text, onlyWithSalary}
 
 function openSearchSettings(resumeId, title, areaId, areaName) {
-  document.getElementById("search-text").value = searchSettingsByResume[resumeId]?.text || title;
+  document.getElementById("search-text").value =
+    searchSettingsByResume[resumeId]?.text || title;
+
   document.getElementById("search-settings-modal").dataset.resumeId = resumeId;
   document.getElementById("search-settings-modal").classList.remove("hidden");
 
-  if (areaId && !selectedAreas.find(a => a.id === areaId)) {
-    selectedAreas.push({ id: areaId, name: areaName });
-    updateSelectedTags();
-    // Подставим в чекбокс (если дерево уже отрисовано)
-    const checkbox = document.querySelector(`#region-tree input[type="checkbox"][value="${areaId}"]`);
-    if (checkbox) checkbox.checked = true;
+  // Очищаем текущий выбор
+  selectedAreas = [];
+
+  // 1. Если сохранены — восстанавливаем
+  const saved = searchSettingsByResume[resumeId]?.area;
+  if (saved?.length) {
+    selectedAreas = saved.map(id => ({ id, name: "..." })); // name подставим ниже
   }
+  // 2. Если нет — ставим по дефолту из резюме
+  else if (areaId) {
+    selectedAreas.push({ id: areaId, name: areaName });
+  }
+
+  updateSelectedTags();
+
+  // 3. Обновим чекбоксы, если дерево уже загружено
+  const checkboxes = document.querySelectorAll(`#region-tree input[type="checkbox"]`);
+  checkboxes.forEach(cb => (cb.checked = selectedAreas.some(a => a.id === cb.value)));
 }
 
 function closeSearchSettings() {
