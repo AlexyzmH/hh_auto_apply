@@ -413,22 +413,6 @@ function openSearchSettings(resumeId, title, areaId, areaName) {
   updateSelectedTags();
 }
 
-
-  // Очищаем текущий выбор
-  selectedAreas = [];
-
-  // 1. Если сохранены — восстанавливаем
-  const saved = searchSettingsByResume[resumeId]?.area;
-  if (saved?.length) {
-    selectedAreas = saved.map(id => ({ id, name: "..." })); // name подставим ниже
-  }
-  // 2. Если нет — ставим по дефолту из резюме
-  else if (areaId) {
-    selectedAreas.push({ id: areaId, name: areaName });
-  }
-
-  updateSelectedTags();
-
   // 3. Обновим чекбоксы, если дерево уже загружено
   const checkboxes = document.querySelectorAll(`#region-tree input[type="checkbox"]`);
   checkboxes.forEach(cb => (cb.checked = selectedAreas.some(a => a.id === cb.value)));
