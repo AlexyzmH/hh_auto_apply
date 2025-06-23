@@ -39,13 +39,16 @@
       {% endif %}
     </div>
 
-    <form method="post" action="/select_resume" class="ml-4">
+    <div id="search-results" class="mt-6 space-y-4"></div>
+
+    <form method="POST" action="/start_search">
       <input type="hidden" name="customer_id" value="{{ customer_id }}">
       <input type="hidden" name="resume_id" value="{{ resume.id }}">
-      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-        ✅ Выбрать
+      <button type="submit" class="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700">
+        🔍 Искать и откликнуться
       </button>
     </form>
+
   </div>
 </li>
 
@@ -61,3 +64,80 @@
   </div>
 </body>
 </html>
+
+{% if triggered_search %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    startSearchAndApply();
+  });
+
+  async function startSearchAndApply() {
+    const customerId = "{{ customer_id }}";
+    const response = await fetch(`/vacancies?customer_id=${customerId}`);
+    const data = await response.json();
+
+    const resultsContainer = document.getElementById("search-results");
+    resultsContainer.innerHTML = "";
+
+    if (!data.items || data.items.length === 0) {
+      resultsContainer.innerHTML = '<p class="text-gray-500">🔍 Вакансии не найдены</p>';
+      return;
+    }
+
+    for (const vacancy of data.items) {
+      const card = document.createElement("div");
+      card.className = "border p-4 rounded shadow bg-white";
+
+      const salary = vacancy.salary
+        ? `${vacancy.salary.from || ""} – ${vacancy.salary.to || ""} ${vacancy.salary.currency || ""}`
+        : "Не указана";
+
+      card.innerHTML = `
+        <h3 class="text-lg font-bold text-blue-700">
+          <a href="${vacancy.alternate_url}" target="_blank">${vacancy.name}</a>
+        </h3>
+        <p>💼 ${vacancy.employer?.name || "Без компании"}</p>
+        <p>📍 ${vacancy.area?.name || "Город не указан"}</p>
+        <p>💰 ${salary}</p>
+        <div class="mt-2 text-sm text-gray-500" id="status-${vacancy.id}">⏳ Откликаемся...</div>
+      `;
+
+      resultsContainer.appendChild(card);
+
+      // Автоотклик
+      const payload = {
+        customer_id: customerId,
+        vacancy_id: vacancy.id
+      };
+
+      try {
+        const res = await fetch("/respond", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const statusEl = document.getElementById(`status-${vacancy.id}`);
+        const resData = await res.json();
+
+        if (res.status === 201) {
+          statusEl.textContent = "✅ Успешно откликнулись!";
+          statusEl.className = "text-green-600";
+        } else if (res.status === 303) {
+          statusEl.innerHTML = `🔀 Ручной отклик: <a href="${resData.manual_url}" class="text-blue-600 underline" target="_blank">Перейти</a>`;
+          statusEl.className = "text-yellow-600";
+        } else {
+          statusEl.textContent = `❌ ${resData.error || "Ошибка"}`;
+          statusEl.className = "text-red-600";
+        }
+      } catch (e) {
+        console.error("❌ Ошибка отклика:", e);
+        const statusEl = document.getElementById(`status-${vacancy.id}`);
+        statusEl.textContent = "❌ Сетевая ошибка";
+        statusEl.className = "text-red-600";
+      }
+    }
+  }
+</script>
+{% endif %}
+
