@@ -264,14 +264,11 @@ def delete_customer(customer_id):
 
     return redirect("/")
 
-
 @app.route("/respond", methods=["POST"])
 def respond_to_vacancy():
     data = request.json
     customer_id = data.get("customer_id")
     vacancy_id = data.get("vacancy_id")
-
-    print(f"🚨 /respond: customer_id={customer_id}, vacancy_id={vacancy_id}")
 
     auth_data = load_auth_data()
     customer = auth_data.get(customer_id)
@@ -284,171 +281,102 @@ def respond_to_vacancy():
 
     headers = {
         "Authorization": f"Bearer {access_token}",
-        "HH-User-Agent": "SmartApply/1.0 (joopsasakomarov37@yahoo.com)"
+        "HH-User-Agent": "SmartApply/1.0"
     }
 
-    # 1. Получаем вакансию
+    # Получаем вакансию
     vacancy_resp = requests.get(f"https://api.hh.ru/vacancies/{vacancy_id}", headers=headers)
     if vacancy_resp.status_code != 200:
         return jsonify({"error": "Не удалось получить вакансию"}), 500
     vacancy = vacancy_resp.json()
 
-    # 2. Проверка доступности отклика
-
-    # 3. Получаем выбранное резюме из сохранённых данных
     resume_id = customer.get("selected_resume_id")
     if not resume_id:
-        return jsonify({"error": "Резюме не выбрано. Выберите его на странице клиента."}), 400
+        return jsonify({"error": "Резюме не выбрано"}), 400
 
-    # (необязательно, но желательно: проверим, что такое резюме всё ещё существует)
+    # Проверяем что резюме есть
     resumes_resp = requests.get("https://api.hh.ru/resumes/mine", headers=headers)
-    if resumes_resp.status_code != 200:
-        return jsonify({"error": "Не удалось проверить список резюме"}), 500
-
     resumes = resumes_resp.json().get("items", [])
-    resume_ids = [r["id"] for r in resumes]
-    if resume_id not in resume_ids:
-        return jsonify({"error": "Сохранённое резюме больше не существует. Выберите заново."}), 400
+    if resume_id not in [r["id"] for r in resumes]:
+        return jsonify({"error": "Резюме не существует"}), 400
 
-    # 4. Проверка подходящих резюме
+    # Проверка на подходящее резюме
     suitable_resp = requests.get(vacancy.get("suitable_resumes_url"), headers=headers)
     suitable_ids = [r["id"] for r in suitable_resp.json().get("items", [])]
+
     if resume_id not in suitable_ids:
-        return jsonify({"error": "Резюме не подходит для отклика на эту вакансию"}), 403
-
-    # 5. Формируем тело запроса — multipart/form-data
-    form_data = {
-        "resume_id": resume_id,
-        "vacancy_id": vacancy_id
-    }
-
-    # Новое: если message передан — используем его
-    message = data.get("message", "").strip()
-    if message:
-        form_data["message"] = message
-    # Иначе — если HH требует письмо, а мы его не дали — вставим шаблон
-    elif vacancy.get("response_letter_required"):
-        form_data["message"] = "Здравствуйте! Заинтересовала ваша вакансия. Готов обсудить детали."
-
-    # 6. Отправляем отклик
-    print("📄 Отправляем отклик с данными:")
-    print("📌 form_data:", json.dumps(form_data, ensure_ascii=False, indent=2))
-    print("🧾 headers:", json.dumps(headers, ensure_ascii=False, indent=2))
-    print("📎 suitable resume_ids:", suitable_ids)
-    print("✅ Используемое resume_id:", resume_id)
-
-    apply_resp = requests.post(
-        "https://api.hh.ru/negotiations",
-        headers=headers,
-        files={key: (None, value) for key, value in form_data.items()}
-    )
-
-    print("📥 Ответ от API:")
-    print("📌 Статус:", apply_resp.status_code)
-    print("📃 Тело:", apply_resp.text)
-
-    # 7. Обработка ответа
-    if apply_resp.status_code == 201:
-        # ✅ Сохраняем отклик
-        response_entry = {
-            "vacancy_id": vacancy_id,
-            "name": vacancy.get("name"),
-            "company": vacancy.get("employer", {}).get("name", "Не указано"),
-            "city": vacancy.get("area", {}).get("name", "Не указано"),
-            "salary": format_salary(vacancy.get("salary")),
-            "url": vacancy.get("alternate_url"),
-            "applied_at": datetime.utcnow().isoformat()
+        status = "fail"
+        message = "Резюме не подходит для отклика"
+    else:
+        # Пытаемся откликнуться
+        form_data = {
+            "resume_id": resume_id,
+            "vacancy_id": vacancy_id
         }
 
-        if RESPONSES_FILE.exists():
-            with open(RESPONSES_FILE, "r", encoding="utf-8") as f:
-                all_data = json.load(f)
+        msg = data.get("message", "").strip()
+        if msg:
+            form_data["message"] = msg
+        elif vacancy.get("response_letter_required"):
+            form_data["message"] = "Здравствуйте! Заинтересовала ваша вакансия. Готов обсудить детали."
+
+        apply_resp = requests.post(
+            "https://api.hh.ru/negotiations",
+            headers=headers,
+            files={k: (None, v) for k, v in form_data.items()}
+        )
+
+        if apply_resp.status_code == 201:
+            status = "success"
+            message = "✅ Успешно откликнулись"
+        elif apply_resp.status_code == 303:
+            status = "manual"
+            message = "🔀 Требуется ручной отклик"
         else:
-            all_data = {}
+            try:
+                error_json = apply_resp.json()
+                reason = error_json.get("errors", [{}])[0].get("value", "unknown")
+                message = reason
+            except:
+                reason = "unknown"
+                message = "Неизвестная ошибка"
+            status = "fail"
 
-        customer_block = all_data.get(customer_id, {})
-        resume_block = customer_block.get(resume_id, [])
+    # 📦 Собираем response_entry и сохраняем
+    response_entry = {
+        "vacancy_id": vacancy_id,
+        "name": vacancy.get("name"),
+        "company": vacancy.get("employer", {}).get("name", "Не указано"),
+        "city": vacancy.get("area", {}).get("name", "Не указано"),
+        "salary": format_salary(vacancy.get("salary")),
+        "url": vacancy.get("alternate_url"),
+        "applied_at": datetime.utcnow().isoformat(),
+        "status": status
+    }
 
-        # Защита от дубликатов
-        if not any(r["vacancy_id"] == vacancy_id for r in resume_block):
-            resume_block.append(response_entry)
-            customer_block[resume_id] = resume_block
-            all_data[customer_id] = customer_block
-
-            with open(RESPONSES_FILE, "w", encoding="utf-8") as f:
-                json.dump(all_data, f, ensure_ascii=False, indent=2)
-
-        return jsonify({"message": "✅ Отклик успешно отправлен!"}), 201
-
-    elif apply_resp.status_code == 303:
-        return jsonify({
-            "error": "🔀 Вакансия требует прямого отклика. Используйте сайт.",
-            "manual_url": vacancy.get("apply_alternate_url")
-        }), 303
-
-    elif apply_resp.status_code == 403:
-        try:
-            error_json = apply_resp.json()
-            error_value = error_json.get("errors", [{}])[0].get("value", "")
-            if error_value == "test_required":
-                return jsonify({
-                    "error": "📋 Для этой вакансии нужно пройти тест",
-                    "reason": "test_required"
-                }), 403
-
-            elif error_value == "limit_exceeded":
-                return jsonify({
-                    "error": "📛 Превышен дневной лимит откликов. Попробуйте завтра.",
-                    "reason": "limit_exceeded"
-                }), 403
-
-            else:
-                return jsonify({
-                    "error": "⚠️ Вы уже откликались на эту вакансию",
-                    "reason": "already_applied"
-                }), 403
-
-        except Exception as e:
-            return jsonify({
-                "error": "Ошибка разбора ответа от HH",
-                "raw": apply_resp.text,
-                "parse_error": str(e)
-            }), 403
-
-        #else:
-            #return jsonify({
-                #"error": "⛔ Отклик запрещён",
-                #"reason": error_value or "unknown",
-                #"details": error_json
-            #}), 403
-    elif apply_resp.status_code == 400:
-        try:
-            error_json = apply_resp.json()
-            error_value = error_json.get("errors", [{}])[0].get("value", "")
-            if error_value == "limit_exceeded":
-                return jsonify({
-                    "error": "📛 Превышен дневной лимит откликов. Попробуйте завтра.",
-                    "reason": "limit_exceeded"
-                }), 403
-            else:
-                return jsonify({
-                    "error": "❌ Неверный запрос",
-                    "reason": error_value or "unknown",
-                    "details": error_json
-                }), 400
-        except Exception as e:
-            return jsonify({
-                "error": "Ошибка при разборе тела 400 ошибки",
-                "raw": apply_resp.text,
-                "parse_error": str(e)
-            }), 400
-
+    if RESPONSES_FILE.exists():
+        with open(RESPONSES_FILE, "r", encoding="utf-8") as f:
+            all_data = json.load(f)
     else:
-        return jsonify({
-            "error": "❌ Неизвестная ошибка",
-            "status": apply_resp.status_code,
-            "body": apply_resp.text
-        }), 500
+        all_data = {}
+
+    customer_block = all_data.get(customer_id, {})
+    resume_block = customer_block.get(resume_id, [])
+
+    if not any(r["vacancy_id"] == vacancy_id for r in resume_block):
+        resume_block.append(response_entry)
+        customer_block[resume_id] = resume_block
+        all_data[customer_id] = customer_block
+
+        with open(RESPONSES_FILE, "w", encoding="utf-8") as f:
+            json.dump(all_data, f, ensure_ascii=False, indent=2)
+
+    return jsonify({
+        "message": message,
+        "status": status,
+        "entry": response_entry
+    }), 200
+
 
 
 @app.route("/select_resume", methods=["POST"])
