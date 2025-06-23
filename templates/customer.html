@@ -142,6 +142,7 @@ function openRegionModal() {
       .then(res => res.json())
       .then(data => {
         window.areaDataLoaded = true;
+        window.allAreas = data;
         renderRegionTree(data);
       });
   }
@@ -382,12 +383,36 @@ async function startSearchAndApply(customerId, resumeId) {
 <script>
 let searchSettingsByResume = {};  // ключ: resumeId, значение: {text, onlyWithSalary}
 
+function getAreaNameById(id) {
+  const traverse = (areas) => {
+    for (const area of areas) {
+      if (area.id === id) return area.name;
+      if (area.areas?.length) {
+        const found = traverse(area.areas);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+  return traverse(window.allAreas || []);
+}
+
 function openSearchSettings(resumeId, title, areaId, areaName) {
   document.getElementById("search-text").value =
     searchSettingsByResume[resumeId]?.text || title;
 
   document.getElementById("search-settings-modal").dataset.resumeId = resumeId;
   document.getElementById("search-settings-modal").classList.remove("hidden");
+
+  if ("area" in (searchSettingsByResume[resumeId] || {})) {
+  const saved = searchSettingsByResume[resumeId].area || [];
+  selectedAreas = saved.map(id => ({
+    id,
+    name: getAreaNameById(id) || "..."
+  }));
+  updateSelectedTags();
+}
+
 
   // Очищаем текущий выбор
   selectedAreas = [];
