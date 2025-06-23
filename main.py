@@ -335,6 +335,7 @@ def respond_to_vacancy():
         else:
             try:
                 error_json = apply_resp.json()
+                print("⚠️ Ответ от HH при отклике:", apply_resp.status_code, apply_resp.text)
                 reason = error_json.get("errors", [{}])[0].get("value", "unknown")
                 message = reason
             except:
