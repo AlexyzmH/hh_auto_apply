@@ -27,7 +27,18 @@
           <div class="max-h-48 overflow-y-auto space-y-2 pr-2" id="responses-{{ resume.id }}">
             {% for r in my_responses|reverse %}
               <div class="border p-2 rounded bg-white shadow-sm">
-                <p class="text-blue-700 font-semibold">{{ r.name }}</p>
+                {% if r.status %}
+                  <p class="text-sm mt-1
+                    {% if r.status == 'success' %}text-green-600
+                    {% elif r.status == 'manual' %}text-yellow-600
+                    {% else %}text-red-600
+                    {% endif %}">
+                    {% if r.status == 'success' %}✅ Успешно откликнулись
+                    {% elif r.status == 'manual' %}🔀 Требуется ручной отклик
+                    {% elif r.status == 'fail' %}❌ Не удалось откликнуться
+                    {% endif %}
+                  </p>
+                {% endif %}
                 <p class="text-sm text-gray-600">🏢 {{ r.company }} — 📍 {{ r.city }}</p>
                 <p class="text-sm text-gray-600">💰 {{ r.salary }}</p>
                 <p class="text-xs text-gray-400">🕒 {{ r.applied_at[:16]|replace("T", " ") }}</p>
@@ -142,18 +153,30 @@ async function startSearchAndApply(customerId, resumeId) {
 
       const appliedAt = new Date().toISOString().slice(0, 16).replace("T", " ");
 
-      card.innerHTML = `
-        <p class="text-blue-700 font-semibold">${entry.name}</p>
-        <p class="text-sm text-gray-600">🏢 ${entry.company} — 📍 ${entry.city}</p>
-        <p class="text-sm text-gray-600">💰 ${entry.salary}</p>
-        <p class="text-xs text-gray-400">🕒 ${appliedAt}</p>
-        <a href="${entry.url}" target="_blank" class="text-blue-600 hover:underline text-sm">🔗 Открыть на HH</a>
-        <p class="mt-1 text-sm ${statusColor}">${resData.message}</p>
-      `;
+      const userFriendlyMessage = {
+      success: "✅ Успешно откликнулись",
+      manual: "🔀 Требуется ручной отклик",
+      fail: resData.message === "test_required"
+        ? "📋 Нужно пройти тест перед откликом"
+        : resData.message === "already_applied"
+        ? "⚠️ Вы уже откликались ранее"
+        : resData.message || "❌ Неизвестная ошибка"
+    };
+
+    card.innerHTML = `
+      <p class="text-blue-700 font-semibold">${entry.name}</p>
+      <p class="text-sm text-gray-600">🏢 ${entry.company} — 📍 ${entry.city}</p>
+      <p class="text-sm text-gray-600">💰 ${entry.salary}</p>
+      <p class="text-xs text-gray-400">🕒 ${appliedAt}</p>
+      <a href="${entry.url}" target="_blank" class="text-blue-600 hover:underline text-sm">🔗 Открыть на HH</a>
+      <p class="mt-1 text-sm ${statusColor}">${userFriendlyMessage[resData.status]}</p>
+    `;
+
 
       container.prepend(card);
 
     } catch (err) {
+      console.error("❌ Ошибка при отклике на вакансию:", v.id, err);
       const errorCard = document.createElement("div");
       errorCard.className = "text-red-600 text-sm";
       errorCard.textContent = `❌ Ошибка сети при отклике`;
