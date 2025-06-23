@@ -47,6 +47,13 @@
       🔍 Искать и откликнуться
     </button>
 
+    <button
+      onclick="stopAuto = true"
+      class="ml-2 bg-red-600 text-white px-3 py-2 rounded hover:bg-red-700">
+      🛑 Остановить
+    </button>
+
+
     </form>
 
   </div>
@@ -66,6 +73,7 @@
 </html>
 
 <script>
+let stopAuto = false;
 async function startSearchAndApply(customerId, resumeId) {
   const container = document.getElementById(`responses-${resumeId}`);
   if (!container) return;
@@ -99,8 +107,16 @@ async function startSearchAndApply(customerId, resumeId) {
     container.prepend(msg);
     return;
   }
-
+  stopAuto = false;  // сбрасываем перед новым запуском
   for (const v of items) {
+    if (stopAuto) {
+    const msg = document.createElement("p");
+    msg.textContent = "🛑 Автоотклик остановлен пользователем.";
+    msg.className = "text-sm text-yellow-600";
+    container.prepend(msg);
+    break;
+  }
+
     try {
       const respondRes = await fetch("/respond", {
         method: "POST",
