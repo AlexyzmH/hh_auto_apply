@@ -90,11 +90,8 @@
 
 
   </div>
-    <!-- ✅ Добавка: Региональный выбор как в /search -->
-
-<!-- Модалка с настройками поиска -->
 <div id="search-settings-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden z-50 flex items-center justify-center">
-  <div class="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded shadow relative">
+  <div class="bg-white w-full max-w-xl p-6 rounded shadow relative">
     <button onclick="closeSearchSettings()" class="absolute top-2 right-2 text-gray-500 hover:text-black">✖</button>
     <h2 class="text-xl font-bold mb-4">⚙️ Настройки поиска</h2>
 
@@ -104,17 +101,17 @@
         <input type="text" id="search-text" class="w-full mt-1 p-2 border rounded">
       </div>
 
-      <!-- ✅ Регион -->
-      <div class="mb-4">
-        <label class="block font-medium mb-1">Регион:</label>
-        <button type="button" onclick="openRegionModal()"
-          class="bg-gray-200 px-3 py-2 rounded hover:bg-gray-300">
-          📍 Выбрать регион
-        </button>
-        <div id="selected-region-tags" class="flex flex-wrap gap-2 mt-2 text-sm text-gray-800"></div>
-        <input type="hidden" id="selected-area-ids">
+      <div>
+        <label class="block font-medium">Город (area name):</label>
+        <input type="text" id="search-area-name" disabled class="w-full mt-1 p-2 border bg-gray-100 rounded">
       </div>
 
+      <div>
+        <label class="inline-flex items-center">
+          <input type="checkbox" id="search-only-with-salary" class="mr-2">
+          Только с указанной зарплатой
+        </label>
+      </div>
     </div>
 
     <div class="mt-6 flex justify-end">
@@ -124,139 +121,6 @@
   </div>
 </div>
 
-<!-- 🗺️ Модалка выбора региона -->
-<div id="region-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden z-50 flex items-center justify-center">
-  <div class="bg-white max-h-[80vh] w-[90vw] max-w-2xl overflow-y-auto rounded shadow-lg p-4 relative">
-    <button type="button" onclick="closeRegionModal()" class="absolute top-2 right-2 text-gray-500 hover:text-black">✖</button>
-    <h2 class="text-xl font-bold mb-2">Выберите регион</h2>
-    <ul id="region-tree" class="space-y-1 text-sm text-gray-800"></ul>
-  </div>
-</div>
-
-<script>
-let selectedAreas = [];
-
-function openRegionModal() {
-  document.getElementById('region-modal').classList.remove('hidden');
-  if (!window.areaDataLoaded) {
-    fetch("https://api.hh.ru/areas")
-      .then(res => res.json())
-      .then(data => {
-        window.areaDataLoaded = true;
-        renderRegionTree(data);
-      });
-  }
-}
-
-function closeRegionModal() {
-  document.getElementById('region-modal').classList.add('hidden');
-}
-
-function renderRegionTree(data) {
-  const tree = document.getElementById('region-tree');
-  tree.innerHTML = '';
-
-  const russia = data.find(c => c.name === 'Россия');
-  const moscow = russia.areas.find(r => r.name === 'Москва');
-  const spb = russia.areas.find(r => r.name === 'Санкт-Петербург');
-
-  [moscow, spb].forEach(city => {
-    if (!city) return;
-    const li = document.createElement('li');
-    li.innerHTML =
-      <label class="inline-flex items-center space-x-2">
-        <input type="checkbox" value="${city.id}" onchange="toggleArea('${city.id}', '${city.name}')">
-        <span>${city.name}</span>
-      </label>
-    ;
-    tree.appendChild(li);
-  });
-
-  for (const region of russia.areas) {
-    if ([moscow.id, spb.id].includes(region.id)) continue;
-    const regionItem = document.createElement('li');
-
-    if (region.areas.length === 0) {
-      regionItem.innerHTML =
-        <label class="inline-flex items-center space-x-2">
-          <input type="checkbox" value="${region.id}" onchange="toggleArea('${region.id}', '${region.name}')">
-          <span>${region.name}</span>
-        </label>
-      ;
-    } else {
-      regionItem.innerHTML =
-        <details>
-          <summary class="cursor-pointer font-semibold">${region.name}</summary>
-          <ul class="ml-4 mt-1 space-y-1">
-            <li>
-              <label class="inline-flex items-center space-x-2">
-                <input type="checkbox" value="${region.id}" onchange="toggleArea('${region.id}', '${region.name}')">
-                <span>📍 ${region.name} (весь регион)</span>
-              </label>
-            </li>
-            ${region.areas.map(city =>
-              <li>
-                <label class="inline-flex items-center space-x-2">
-                  <input type="checkbox" value="${city.id}" onchange="toggleArea('${city.id}', '${city.name}')">
-                  <span>${city.name}</span>
-                </label>
-              </li>
-            ).join('')}
-          </ul>
-        </details>
-      ;
-    }
-    tree.appendChild(regionItem);
-  }
-}
-
-function toggleArea(id, name) {
-  const exists = selectedAreas.find(a => a.id === id);
-  if (exists) {
-    selectedAreas = selectedAreas.filter(a => a.id !== id);
-  } else {
-    selectedAreas.push({ id, name });
-  }
-  updateSelectedTags();
-}
-
-function updateSelectedTags() {
-  const container = document.getElementById('selected-region-tags');
-  const hiddenInput = document.getElementById('selected-area-ids');
-  container.innerHTML = '';
-
-  for (const area of selectedAreas) {
-    const tag = document.createElement('span');
-    tag.className = 'bg-gray-200 px-2 py-1 rounded flex items-center gap-1';
-    tag.innerHTML = ${area.name}
-      <button type="button" onclick="removeArea('${area.id}')" class="text-red-600 hover:text-red-800">✖</button>;
-    container.appendChild(tag);
-  }
-
-  hiddenInput.value = selectedAreas.map(a => a.id).join(',');
-}
-
-function removeArea(id) {
-  selectedAreas = selectedAreas.filter(a => a.id !== id);
-  updateSelectedTags();
-  const checkbox = document.querySelector(#region-tree input[type="checkbox"][value="${id}"]);
-  if (checkbox) checkbox.checked = false;
-}
-
-function saveSearchSettings() {
-  const resumeId = document.getElementById("search-settings-modal").dataset.resumeId;
-  const text = document.getElementById("search-text").value.trim();
-  const areaIds = document.getElementById("selected-area-ids").value;
-  searchSettingsByResume[resumeId] = { text, };
-  if (areaIds) {
-    searchSettingsByResume[resumeId]["area"] = areaIds.split(',');
-  }
-  closeSearchSettings();
-}
-</script>
-
-</div>
-
 </body>
 </html>
 
@@ -264,7 +128,7 @@ function saveSearchSettings() {
 let stopAuto = false;
 async function startSearchAndApply(customerId, resumeId) {
   console.log("🚀 startSearchAndApply() запущена для резюме:", resumeId);
-  const container = document.getElementById(responses-${resumeId});
+  const container = document.getElementById(`responses-${resumeId}`);
   if (!container) return;
 
   const loading = document.createElement("p");
@@ -285,18 +149,10 @@ async function startSearchAndApply(customerId, resumeId) {
   // Получаем вакансии
   let searchParams = new URLSearchParams({ customer_id: customerId });
   const settings = searchSettingsByResume[resumeId];
-  if (settings) {
-    for (const [key, value] of Object.entries(settings)) {
-      if (Array.isArray(value)) {
-        value.forEach(v => searchParams.append(key, v));
-      } else {
-        searchParams.append(key, value);
-      }
-    }
-  }
   if (settings?.text) searchParams.append("text", settings.text);
+  if (settings?.only_with_salary) searchParams.append("only_with_salary", "true");
 
-  const res = await fetch(/vacancies?${searchParams.toString()});
+  const res = await fetch(`/vacancies?${searchParams.toString()}`);
 
   const data = await res.json();
   const items = data.items || [];
@@ -356,14 +212,14 @@ async function startSearchAndApply(customerId, resumeId) {
         : resData.message || "❌ Неизвестная ошибка"
     };
 
-    card.innerHTML =
+    card.innerHTML = `
       <p class="text-blue-700 font-semibold">${entry.name}</p>
       <p class="text-sm text-gray-600">🏢 ${entry.company} — 📍 ${entry.city}</p>
       <p class="text-sm text-gray-600">💰 ${entry.salary}</p>
       <p class="text-xs text-gray-400">🕒 ${appliedAt}</p>
       <a href="${entry.url}" target="_blank" class="text-blue-600 hover:underline text-sm">🔗 Открыть на HH</a>
       <p class="mt-1 text-sm ${statusColor}">${userFriendlyMessage[resData.status]}</p>
-    ;
+    `;
 
 
       container.prepend(card);
@@ -372,7 +228,7 @@ async function startSearchAndApply(customerId, resumeId) {
       console.error("❌ Ошибка при отклике на вакансию:", v.id, err);
       const errorCard = document.createElement("div");
       errorCard.className = "text-red-600 text-sm";
-      errorCard.textContent = ❌ Ошибка сети при отклике;
+      errorCard.textContent = `❌ Ошибка сети при отклике`;
       container.prepend(errorCard);
     }
   }
@@ -380,10 +236,12 @@ async function startSearchAndApply(customerId, resumeId) {
 </script>
 
 <script>
-let searchSettingsByResume = {};  // ключ: resumeId, значение: {text, }
+let searchSettingsByResume = {};  // ключ: resumeId, значение: {text, onlyWithSalary}
 
 function openSearchSettings(resumeId, title, areaName) {
   document.getElementById("search-text").value = searchSettingsByResume[resumeId]?.text || title;
+  document.getElementById("search-only-with-salary").checked = searchSettingsByResume[resumeId]?.only_with_salary || false;
+  document.getElementById("search-area-name").value = areaName || "Не указан";
   document.getElementById("search-settings-modal").dataset.resumeId = resumeId;
   document.getElementById("search-settings-modal").classList.remove("hidden");
 }
@@ -395,17 +253,9 @@ function closeSearchSettings() {
 function saveSearchSettings() {
   const resumeId = document.getElementById("search-settings-modal").dataset.resumeId;
   const text = document.getElementById("search-text").value.trim();
-  const areaIds = document.getElementById("selected-area-ids").value;
-
-  searchSettingsByResume[resumeId] = {
-    text,
-  };
-
-  if (areaIds) {
-    searchSettingsByResume[resumeId]["area"] = areaIds.split(',');
-  }
-
+  const onlyWithSalary = document.getElementById("search-only-with-salary").checked;
+  searchSettingsByResume[resumeId] = { text, only_with_salary: onlyWithSalary };
   closeSearchSettings();
 }
-
 </script>
+
