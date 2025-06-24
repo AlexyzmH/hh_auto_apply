@@ -310,7 +310,7 @@ function closeSearchSettings() {
 function saveSearchSettings() {
   const resumeId = document.getElementById("search-settings-modal").dataset.resumeId;
   const text = document.getElementById("search-text").value.trim();
-  const coverLetter = document.getElementById("search-cover-letter").value.trim();
+  const coverLetter = document.getElementById("cover-letter-text").value.trim();
 
   searchSettingsByResume[resumeId] = {
     text,
