@@ -5,6 +5,7 @@ from auth_utils import get_valid_access_token, load_auth_data
 
 def apply_for_customer_resume(customer_id, resume_id, text=None, message=None):
     print(f"📡 apply_for_customer_resume: {customer_id=} {resume_id=}")
+    print(f"📝 text = '{text}', message длина = {len(message or '')}")
 
     auth_data = load_auth_data()
     customer = auth_data.get(customer_id)

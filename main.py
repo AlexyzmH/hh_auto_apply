@@ -48,13 +48,14 @@ def background_apply_loop(customer_id, resume_id, text=None, message=None):
             with app.test_request_context():
                 apply_for_customer_resume(customer_id, resume_id, text=text, message=message)
         except Exception as e:
-            print(f"❌ Ошибка в background loop: {e}")
+            import traceback
+            print(f"🔥 Ошибка в background_apply_loop: {e}")
+            traceback.print_exc()
 
-        # обновляем время
         tasks[customer_id][resume_id]["last_checked"] = datetime.utcnow().isoformat()
         save_tasks(tasks)
 
-        time.sleep(300)  # 5 минут
+        time.sleep(300) # 5 минут
 
 
 @app.route("/")
@@ -66,6 +67,7 @@ def index():
 @app.route("/start_background_apply", methods=["POST"])
 def start_background_apply():
     data = request.get_json()
+    print(f"📩 Получен запрос на старт: {data}")
     customer_id = data.get("customer_id")
     resume_id = data.get("resume_id")
     text = data.get("text")
@@ -80,6 +82,8 @@ def start_background_apply():
         "last_checked": datetime.utcnow().isoformat()
     }
     save_tasks(tasks)
+
+    print(f"🚀 Запускаем поток для {customer_id=}, {resume_id=}, {text=}, {message=}")
 
     thread = Thread(target=background_apply_loop, args=(customer_id, resume_id, text, message))
     thread.start()
