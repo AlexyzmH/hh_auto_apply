@@ -345,6 +345,9 @@ async function startBackgroundApply(customerId, resumeId) {
   const data = await res.json();
   console.log("🚀 Фоновый запуск: ", data);
   console.log("📥 Ответ от сервера:", data);
+
+  // 🔁 запускаем обновление UI
+  pollResponses(customerId, resumeId);
 }
 
 async function stopBackgroundApply(customerId, resumeId) {
@@ -356,6 +359,40 @@ async function stopBackgroundApply(customerId, resumeId) {
 
   const data = await res.json();
   console.log("🛑 Остановлен фоновый поиск:", data);
+}
+
+function pollResponses(customerId, resumeId) {
+  setInterval(async () => {
+    const res = await fetch(`/responses/${customerId}/${resumeId}`);
+    const data = await res.json();
+    const container = document.getElementById(`responses-${resumeId}`);
+    if (!container) return;
+
+    container.innerHTML = "";
+
+    for (const r of data.responses.reverse()) {
+      const card = document.createElement("div");
+      card.className = "border p-2 rounded bg-white shadow-sm";
+      card.innerHTML = `
+        <p class="text-sm text-gray-600">🏢 ${r.company} — 📍 ${r.city}</p>
+        <p class="text-sm text-gray-600">💰 ${r.salary}</p>
+        <p class="text-xs text-gray-400">🕒 ${r.applied_at.slice(0, 16).replace("T", " ")}</p>
+        <a href="${r.url}" target="_blank" class="text-blue-600 hover:underline text-sm">🔗 Открыть на HH</a>
+        <p class="mt-1 text-sm ${
+          r.status === "success" ? "text-green-600" :
+          r.status === "manual" ? "text-yellow-600" :
+          "text-red-600"
+        }">
+          ${
+            r.status === "success" ? "✅ Успешно откликнулись" :
+            r.status === "manual" ? "🔀 Требуется ручной отклик" :
+            "❌ Не удалось откликнуться"
+          }
+        </p>
+      `;
+      container.prepend(card);
+    }
+  }, 10000); // каждые 10 секунд
 }
 
 

@@ -32,6 +32,15 @@ def load_tasks():
 def save_tasks(data):
     TASKS_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
+@app.route("/responses/<customer_id>/<resume_id>")
+def get_responses(customer_id, resume_id):
+    if RESPONSES_FILE.exists():
+        with open(RESPONSES_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        resume_responses = data.get(customer_id, {}).get(resume_id, [])
+    else:
+        resume_responses = []
+    return jsonify({"responses": resume_responses})
 
 def background_apply_loop(customer_id, resume_id, text=None, message=None):
     print(f"🚀 Старт фонового автоотклика для {customer_id}, резюме {resume_id}")
