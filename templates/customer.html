@@ -110,6 +110,12 @@
       </div>
     </div>
 
+    <div>
+      <label class="block font-medium">Сопроводительное письмо:</label>
+      <textarea id="search-cover-letter" rows="4" class="w-full mt-1 p-2 border rounded"></textarea>
+    </div>
+
+
     <div class="mt-6 flex justify-end">
       <button onclick="closeSearchSettings()" class="mr-3 bg-gray-300 px-4 py-2 rounded hover:bg-gray-400">Отмена</button>
       <button onclick="saveSearchSettings()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Сохранить</button>
@@ -215,7 +221,8 @@ async function startSearchAndApply(customerId, resumeId, areaId) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customer_id: customerId,
-          vacancy_id: v.id
+          vacancy_id: v.id,
+          message: settings?.message || ""
         })
       });
     } catch (err) {
@@ -282,6 +289,7 @@ function openSearchSettings(resumeId, title, areaName) {
   document.getElementById("search-area-name").value = areaName || "Не указан";
   document.getElementById("search-settings-modal").dataset.resumeId = resumeId;
   document.getElementById("search-settings-modal").classList.remove("hidden");
+  document.getElementById("search-cover-letter").value = searchSettingsByResume[resumeId]?.message || "";
 }
 
 function closeSearchSettings() {
@@ -291,7 +299,8 @@ function closeSearchSettings() {
 function saveSearchSettings() {
   const resumeId = document.getElementById("search-settings-modal").dataset.resumeId;
   const text = document.getElementById("search-text").value.trim();
-  searchSettingsByResume[resumeId] = { text, };
+  const message = document.getElementById("search-cover-letter").value.trim();
+  searchSettingsByResume[resumeId] = { text, message };
   closeSearchSettings();
 }
 </script>
