@@ -187,9 +187,6 @@ def get_vacancies():
     if search_fields:
         params["search_field"] = search_fields[0]
 
-    if request.args.get("only_with_salary") == "true":
-        params["only_with_salary"] = "true"
-
     per_page = 50
     target_results = 50
     page = 0

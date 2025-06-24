@@ -108,13 +108,6 @@
         <label class="block font-medium">Город (area name):</label>
         <input type="text" id="search-area-name" disabled class="w-full mt-1 p-2 border bg-gray-100 rounded">
       </div>
-
-      <div>
-        <label class="inline-flex items-center">
-          <input type="checkbox" id="search-only-with-salary" class="mr-2">
-          Только с указанной зарплатой
-        </label>
-      </div>
     </div>
 
     <div class="mt-6 flex justify-end">
@@ -160,7 +153,6 @@ async function startSearchAndApply(customerId, resumeId, areaId) {
 
   const settings = searchSettingsByResume[resumeId];
   if (settings?.text) searchParams.append("text", settings.text);
-  if (settings?.only_with_salary) searchParams.append("only_with_salary", "true");
 
   console.log("🔎 Параметры поиска:", searchParams.toString());
 
@@ -283,11 +275,10 @@ async function startSearchAndApply(customerId, resumeId, areaId) {
 </script>
 
 <script>
-let searchSettingsByResume = {};  // ключ: resumeId, значение: {text, onlyWithSalary}
+let searchSettingsByResume = {};  // ключ: resumeId, значение: {text}
 
 function openSearchSettings(resumeId, title, areaName) {
   document.getElementById("search-text").value = searchSettingsByResume[resumeId]?.text || title;
-  document.getElementById("search-only-with-salary").checked = searchSettingsByResume[resumeId]?.only_with_salary || false;
   document.getElementById("search-area-name").value = areaName || "Не указан";
   document.getElementById("search-settings-modal").dataset.resumeId = resumeId;
   document.getElementById("search-settings-modal").classList.remove("hidden");
@@ -300,8 +291,7 @@ function closeSearchSettings() {
 function saveSearchSettings() {
   const resumeId = document.getElementById("search-settings-modal").dataset.resumeId;
   const text = document.getElementById("search-text").value.trim();
-  const onlyWithSalary = document.getElementById("search-only-with-salary").checked;
-  searchSettingsByResume[resumeId] = { text, only_with_salary: onlyWithSalary };
+  searchSettingsByResume[resumeId] = { text, };
   closeSearchSettings();
 }
 </script>
