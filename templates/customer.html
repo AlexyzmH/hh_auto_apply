@@ -342,10 +342,9 @@ async function startBackgroundApply(customerId, resumeId) {
     })
   });
 
-  console.log("📥 Ответ от сервера:", data);
-
   const data = await res.json();
   console.log("🚀 Фоновый запуск: ", data);
+  console.log("📥 Ответ от сервера:", data);
 }
 
 async function stopBackgroundApply(customerId, resumeId) {
