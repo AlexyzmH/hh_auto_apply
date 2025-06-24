@@ -129,14 +129,17 @@ let stopAuto = false;
 async function startSearchAndApply(customerId, resumeId, areaId) {
   console.log("🚀 startSearchAndApply() запущена для резюме:", resumeId);
   const container = document.getElementById(`responses-${resumeId}`);
-  if (!container) return;
+  if (!container) {
+    console.warn("❗ Контейнер для откликов не найден");
+    return;
+  }
 
   const loading = document.createElement("p");
   loading.textContent = "🔄 Ищем вакансии и откликаемся...";
   loading.className = "text-gray-500";
   container.prepend(loading);
 
-  // Сохраняем выбор резюме
+  console.log("💾 Сохраняем выбранное резюме...");
   await fetch("/select_resume", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -146,19 +149,46 @@ async function startSearchAndApply(customerId, resumeId, areaId) {
     })
   });
 
-  // Получаем вакансии
+  console.log("📡 Готовим параметры запроса на /vacancies");
   let searchParams = new URLSearchParams({ customer_id: customerId });
   if (areaId) {
     searchParams.append("area", areaId);
   }
+
   const settings = searchSettingsByResume[resumeId];
   if (settings?.text) searchParams.append("text", settings.text);
   if (settings?.only_with_salary) searchParams.append("only_with_salary", "true");
 
-  const res = await fetch(`/vacancies?${searchParams.toString()}`);
+  console.log("🔎 Параметры поиска:", searchParams.toString());
 
-  const data = await res.json();
+  let res;
+  try {
+    res = await fetch(`/vacancies?${searchParams.toString()}`);
+  } catch (e) {
+    console.error("❌ Ошибка сети при запросе вакансий:", e);
+    loading.remove();
+    const msg = document.createElement("p");
+    msg.textContent = "❌ Ошибка загрузки вакансий";
+    msg.className = "text-red-600";
+    container.prepend(msg);
+    return;
+  }
+
+  let data;
+  try {
+    data = await res.json();
+  } catch (e) {
+    console.error("❌ Ошибка парсинга JSON /vacancies:", e);
+    loading.remove();
+    const msg = document.createElement("p");
+    msg.textContent = "❌ Ошибка обработки вакансий";
+    msg.className = "text-red-600";
+    container.prepend(msg);
+    return;
+  }
+
   const items = data.items || [];
+  console.log(`📦 Получено ${items.length} вакансий`);
 
   loading.remove();
 
@@ -169,18 +199,23 @@ async function startSearchAndApply(customerId, resumeId, areaId) {
     container.prepend(msg);
     return;
   }
-  stopAuto = false;  // сбрасываем перед новым запуском
+
+  stopAuto = false;
+
   for (const v of items) {
     if (stopAuto) {
-    const msg = document.createElement("p");
-    msg.textContent = "🛑 Автоотклик остановлен пользователем.";
-    msg.className = "text-sm text-yellow-600";
-    container.prepend(msg);
-    break;
-  }
+      const msg = document.createElement("p");
+      msg.textContent = "🛑 Автоотклик остановлен пользователем.";
+      msg.className = "text-sm text-yellow-600";
+      container.prepend(msg);
+      break;
+    }
 
+    console.log("📨 Пытаемся откликнуться на вакансию:", v.id, v.name);
+
+    let respondRes;
     try {
-      const respondRes = await fetch("/respond", {
+      respondRes = await fetch("/respond", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -188,24 +223,36 @@ async function startSearchAndApply(customerId, resumeId, areaId) {
           vacancy_id: v.id
         })
       });
+    } catch (err) {
+      console.error("❌ Ошибка сети при отклике на вакансию:", v.id, err);
+      const errorCard = document.createElement("div");
+      errorCard.className = "text-red-600 text-sm";
+      errorCard.textContent = `❌ Ошибка сети при отклике`;
+      container.prepend(errorCard);
+      continue;
+    }
 
-      const resData = await respondRes.json();
-      console.log("📦 Ответ от /respond:", resData);
-      const entry = resData.entry;
+    let resData;
+    try {
+      resData = await respondRes.json();
+    } catch (err) {
+      console.error("❌ Ошибка парсинга ответа /respond:", err);
+      continue;
+    }
 
-      const statusColor =
-        resData.status === "success"
-          ? "text-green-600"
-          : resData.status === "manual"
-          ? "text-yellow-600"
-          : "text-red-600";
+    console.log("📬 Ответ от /respond:", resData);
 
-      const card = document.createElement("div");
-      card.className = "border p-2 rounded bg-white shadow-sm";
+    const entry = resData.entry;
+    const statusColor =
+      resData.status === "success"
+        ? "text-green-600"
+        : resData.status === "manual"
+        ? "text-yellow-600"
+        : "text-red-600";
 
-      const appliedAt = new Date().toISOString().slice(0, 16).replace("T", " ");
+    const appliedAt = new Date().toISOString().slice(0, 16).replace("T", " ");
 
-      const userFriendlyMessage = {
+    const userFriendlyMessage = {
       success: "✅ Успешно откликнулись",
       manual: "🔀 Требуется ручной отклик",
       fail: resData.message === "test_required"
@@ -215,6 +262,8 @@ async function startSearchAndApply(customerId, resumeId, areaId) {
         : resData.message || "❌ Неизвестная ошибка"
     };
 
+    const card = document.createElement("div");
+    card.className = "border p-2 rounded bg-white shadow-sm";
     card.innerHTML = `
       <p class="text-blue-700 font-semibold">${entry.name}</p>
       <p class="text-sm text-gray-600">🏢 ${entry.company} — 📍 ${entry.city}</p>
@@ -224,18 +273,10 @@ async function startSearchAndApply(customerId, resumeId, areaId) {
       <p class="mt-1 text-sm ${statusColor}">${userFriendlyMessage[resData.status]}</p>
     `;
 
-
-      container.prepend(card);
-
-    } catch (err) {
-      console.error("❌ Ошибка при отклике на вакансию:", v.id, err);
-      const errorCard = document.createElement("div");
-      errorCard.className = "text-red-600 text-sm";
-      errorCard.textContent = `❌ Ошибка сети при отклике`;
-      container.prepend(errorCard);
-    }
+    container.prepend(card);
   }
 }
+
 </script>
 
 <script>
