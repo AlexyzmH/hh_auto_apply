@@ -46,7 +46,7 @@ def background_apply_loop(customer_id, resume_id, text=None, message=None):
         print("🔁 Цикл отклика...")
         try:
             with app.test_request_context():
-                apply_for_customer_resume(customer_id, resume_id)
+                apply_for_customer_resume(customer_id, resume_id, text=text, message=message)
         except Exception as e:
             print(f"❌ Ошибка в background loop: {e}")
 
