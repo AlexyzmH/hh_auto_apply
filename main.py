@@ -8,6 +8,9 @@ import json
 from dotenv import load_dotenv
 from pathlib import Path
 from auth_utils import load_auth_data, save_auth_data
+from threading import Thread
+import time
+from background_apply_logic import apply_for_customer_resume
 
 app = Flask(__name__)
 
@@ -18,12 +21,83 @@ CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 REDIRECT_URI = os.getenv("REDIRECT_URI")
 RESPONSES_FILE = Path("responses.json")
 COVER_LETTERS_FILE = Path("cover_letters.json")
+TASKS_FILE = Path("background_tasks.json")
+
+
+def load_tasks():
+    if TASKS_FILE.exists():
+        return json.loads(TASKS_FILE.read_text(encoding="utf-8"))
+    return {}
+
+def save_tasks(data):
+    TASKS_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def background_apply_loop(customer_id, resume_id, text=None, message=None):
+    print(f"🚀 Старт фонового автоотклика для {customer_id}, резюме {resume_id}")
+
+    while True:
+        tasks = load_tasks()
+        if not tasks.get(customer_id, {}).get(resume_id, {}).get("active"):
+            print("🛑 Задача остановлена")
+            return
+
+        # делаем паузу между итерациями
+        print("🔁 Цикл отклика...")
+        try:
+            with app.test_request_context():
+                apply_for_customer_resume(customer_id, resume_id)
+        except Exception as e:
+            print(f"❌ Ошибка в background loop: {e}")
+
+        # обновляем время
+        tasks[customer_id][resume_id]["last_checked"] = datetime.utcnow().isoformat()
+        save_tasks(tasks)
+
+        time.sleep(300)  # 5 минут
 
 
 @app.route("/")
 def index():
     customers = load_auth_data()
     return render_template("index.html", customers=customers)
+
+
+@app.route("/start_background_apply", methods=["POST"])
+def start_background_apply():
+    data = request.get_json()
+    customer_id = data.get("customer_id")
+    resume_id = data.get("resume_id")
+    text = data.get("text")
+    message = data.get("message")
+
+    if not customer_id or not resume_id:
+        return "Missing customer_id or resume_id", 400
+
+    tasks = load_tasks()
+    tasks.setdefault(customer_id, {})[resume_id] = {
+        "active": True,
+        "last_checked": datetime.utcnow().isoformat()
+    }
+    save_tasks(tasks)
+
+    thread = Thread(target=background_apply_loop, args=(customer_id, resume_id, text, message))
+    thread.start()
+    return jsonify({"status": "started"})
+
+@app.route("/stop_background_apply", methods=["POST"])
+def stop_background_apply():
+    customer_id = request.form.get("customer_id")
+    resume_id = request.form.get("resume_id")
+
+    tasks = load_tasks()
+    if tasks.get(customer_id, {}).get(resume_id):
+        tasks[customer_id][resume_id]["active"] = False
+        save_tasks(tasks)
+        return jsonify({"status": "stopped"})
+    else:
+        return jsonify({"error": "not running"}), 404
+
 
 
 @app.route("/cover_letter/<customer_id>/<resume_id>")

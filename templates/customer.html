@@ -57,7 +57,7 @@
     <div id="search-results" class="mt-6 space-y-4"></div>
 
     <button
-      onclick="startSearchAndApply('{{ customer_id }}', '{{ resume.id }}', '{{ resume.area.id if resume.area }}')"
+      onclick="startBackgroundApply('{{ customer_id }}', '{{ resume.id }}')"
       class="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700">
       🔍 Искать и откликнуться
     </button>
@@ -70,7 +70,7 @@
 
 
     <button
-      onclick="stopAuto = true"
+      onclick="stopBackgroundApply('{{ customer_id }}', '{{ resume.id }}')"
       class="ml-2 bg-red-600 text-white px-3 py-2 rounded hover:bg-red-700">
       🛑 Остановить
     </button>
@@ -326,5 +326,36 @@ function saveSearchSettings() {
   closeSearchSettings();
 
 }
+
+async function startBackgroundApply(customerId, resumeId) {
+  const settings = searchSettingsByResume[resumeId] || {};
+
+  const res = await fetch("/start_background_apply", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      customer_id: customerId,
+      resume_id: resumeId,
+      text: settings.text || "",
+      message: settings.message || ""
+    })
+  });
+
+  const data = await res.json();
+  console.log("🚀 Фоновый запуск: ", data);
+}
+
+async function stopBackgroundApply(customerId, resumeId) {
+  const res = await fetch("/stop_background_apply", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ customer_id: customerId, resume_id: resumeId })
+  });
+
+  const data = await res.json();
+  console.log("🛑 Остановлен фоновый поиск:", data);
+}
+
+
 </script>
 
