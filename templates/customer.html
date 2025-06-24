@@ -21,7 +21,7 @@
       <p class="text-sm text-gray-600">ID: {{ resume.id }}</p>
 
       {% set my_responses = responses.get(resume.id, []) %}
-      <div class="mt-3 bg-gray-50 p-3 rounded border">
+<div class="mt-3 bg-gray-50 p-3 rounded border">
   <p class="font-semibold text-sm mb-2">📋 Отклики по этому резюме:</p>
   <div class="max-h-48 overflow-y-auto space-y-2 pr-2" id="responses-{{ resume.id }}">
     {% if my_responses %}
@@ -50,6 +50,8 @@
     {% endif %}
   </div>
 </div>
+    </div>
+
 
 
     <div id="search-results" class="mt-6 space-y-4"></div>
@@ -74,7 +76,6 @@
     </button>
 
 
-    </form>
 
   </div>
 </li>
