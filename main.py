@@ -17,12 +17,40 @@ CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 REDIRECT_URI = os.getenv("REDIRECT_URI")
 RESPONSES_FILE = Path("responses.json")
+COVER_LETTERS_FILE = Path("cover_letters.json")
 
 
 @app.route("/")
 def index():
     customers = load_auth_data()
     return render_template("index.html", customers=customers)
+
+
+@app.route("/cover_letter/<customer_id>")
+def get_cover_letter(customer_id):
+    if COVER_LETTERS_FILE.exists():
+        with open(COVER_LETTERS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return jsonify({"message": data.get(customer_id, "")})
+    return jsonify({"message": ""})
+
+@app.route("/cover_letter/<customer_id>", methods=["POST"])
+def save_cover_letter(customer_id):
+    content = request.json
+    text = content.get("message", "").strip()
+    if not text:
+        return jsonify({"status": "empty"}), 400
+
+    data = {}
+    if COVER_LETTERS_FILE.exists():
+        with open(COVER_LETTERS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+    data[customer_id] = text
+    with open(COVER_LETTERS_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+    return jsonify({"status": "saved"})
 
 
 @app.route("/login")

@@ -127,6 +127,7 @@
 </html>
 
 <script>
+  const customerId = "{{ customer_id }}";
 let stopAuto = false;
 async function startSearchAndApply(customerId, resumeId, areaId) {
   console.log("🚀 startSearchAndApply() запущена для резюме:", resumeId);
@@ -285,6 +286,12 @@ async function startSearchAndApply(customerId, resumeId, areaId) {
 let searchSettingsByResume = {};  // ключ: resumeId, значение: {text}
 
 function openSearchSettings(resumeId, title, areaName) {
+  fetch(`/cover_letter/${customerId}`)
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById("search-cover-letter").value = data.message || "";
+  });
+
   document.getElementById("search-text").value = searchSettingsByResume[resumeId]?.text || title;
   document.getElementById("search-area-name").value = areaName || "Не указан";
   document.getElementById("search-settings-modal").dataset.resumeId = resumeId;
@@ -300,6 +307,18 @@ function saveSearchSettings() {
   const resumeId = document.getElementById("search-settings-modal").dataset.resumeId;
   const text = document.getElementById("search-text").value.trim();
   const message = document.getElementById("search-cover-letter").value.trim();
+  if (message) {
+  fetch(`/cover_letter/${customerId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message })
+  }).then(res => {
+    if (!res.ok) {
+      console.warn("❗ Не удалось сохранить сопроводительное письмо");
+    }
+  });
+}
+
   searchSettingsByResume[resumeId] = { text, message };
   closeSearchSettings();
 }
