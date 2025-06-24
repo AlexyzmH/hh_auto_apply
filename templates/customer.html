@@ -285,19 +285,23 @@ async function startSearchAndApply(customerId, resumeId, areaId) {
 <script>
 let searchSettingsByResume = {};  // ключ: resumeId, значение: {text}
 
-function openSearchSettings(resumeId, title, areaName) {
-  fetch(`/cover_letter/${customerId}`)
-  .then(res => res.json())
-  .then(data => {
-    document.getElementById("search-cover-letter").value = data.message || "";
-  });
-
+async function openSearchSettings(resumeId, title, areaName) {
   document.getElementById("search-text").value = searchSettingsByResume[resumeId]?.text || title;
   document.getElementById("search-area-name").value = areaName || "Не указан";
+
+  try {
+    const res = await fetch(`/cover_letter/${customerId}/${resumeId}`);
+    const data = await res.json();
+    document.getElementById("cover-letter-text").value = data.text || "";
+  } catch (e) {
+    console.warn("❗ Не удалось загрузить сопроводительное:", e);
+    document.getElementById("cover-letter-text").value = "";
+  }
+
   document.getElementById("search-settings-modal").dataset.resumeId = resumeId;
   document.getElementById("search-settings-modal").classList.remove("hidden");
-  document.getElementById("search-cover-letter").value = searchSettingsByResume[resumeId]?.message || "";
 }
+
 
 function closeSearchSettings() {
   document.getElementById("search-settings-modal").classList.add("hidden");
@@ -306,16 +310,17 @@ function closeSearchSettings() {
 function saveSearchSettings() {
   const resumeId = document.getElementById("search-settings-modal").dataset.resumeId;
   const text = document.getElementById("search-text").value.trim();
-  const message = document.getElementById("search-cover-letter").value.trim();
-  if (message) {
-  fetch(`/cover_letter/${customerId}`, {
+  const coverLetter = document.getElementById("cover-letter-text").value.trim();
+
+  searchSettingsByResume[resumeId] = {
+    text,
+    cover_letter: coverLetter
+  };
+
+  fetch(`/save_cover_letter/${customerId}/${resumeId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message })
-  }).then(res => {
-    if (!res.ok) {
-      console.warn("❗ Не удалось сохранить сопроводительное письмо");
-    }
+    body: JSON.stringify({ text: coverLetter })
   });
 }
 

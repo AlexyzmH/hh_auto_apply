@@ -26,31 +26,38 @@ def index():
     return render_template("index.html", customers=customers)
 
 
-@app.route("/cover_letter/<customer_id>")
-def get_cover_letter(customer_id):
-    if COVER_LETTERS_FILE.exists():
-        with open(COVER_LETTERS_FILE, "r", encoding="utf-8") as f:
+@app.route("/cover_letter/<customer_id>/<resume_id>")
+def get_cover_letter(customer_id, resume_id):
+    path = Path("cover_letters.json")
+
+    if path.exists():
+        with path.open("r", encoding="utf-8") as f:
             data = json.load(f)
-        return jsonify({"message": data.get(customer_id, "")})
-    return jsonify({"message": ""})
+        text = data.get(customer_id, {}).get(resume_id, "")
+    else:
+        text = ""
 
-@app.route("/cover_letter/<customer_id>", methods=["POST"])
-def save_cover_letter(customer_id):
-    content = request.json
-    text = content.get("message", "").strip()
-    if not text:
-        return jsonify({"status": "empty"}), 400
+    return jsonify({"text": text})
 
-    data = {}
-    if COVER_LETTERS_FILE.exists():
-        with open(COVER_LETTERS_FILE, "r", encoding="utf-8") as f:
+
+@app.route("/save_cover_letter/<customer_id>/<resume_id>", methods=["POST"])
+def save_cover_letter(customer_id, resume_id):
+    text = request.json.get("text", "")
+    path = Path("cover_letters.json")
+
+    if path.exists():
+        with path.open("r", encoding="utf-8") as f:
             data = json.load(f)
+    else:
+        data = {}
 
-    data[customer_id] = text
-    with open(COVER_LETTERS_FILE, "w", encoding="utf-8") as f:
+    data.setdefault(customer_id, {})[resume_id] = text
+
+    with path.open("w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-    return jsonify({"status": "saved"})
+    return jsonify({"status": "ok"})
+
 
 
 @app.route("/login")
@@ -340,6 +347,13 @@ def respond_to_vacancy():
         }
 
         msg = data.get("message", "").strip()
+        if not msg:
+            path = Path("cover_letters.json")
+            if path.exists():
+                with path.open("r", encoding="utf-8") as f:
+                    all_letters = json.load(f)
+                msg = all_letters.get(customer_id, {}).get(resume_id, "")
+
         if msg:
             form_data["message"] = msg
         elif vacancy.get("response_letter_required"):
