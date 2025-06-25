@@ -1,4 +1,5 @@
 import os
+from http.client import responses
 
 from flask import Flask, redirect, request, render_template, jsonify
 from auth_utils import add_customer_auto, load_auth_data, get_valid_access_token
@@ -258,7 +259,11 @@ def customer_dashboard(customer_id):
 
     responses_by_resume = all_responses.get(customer_id, {})
 
-    total_responses = sum(len(resps) for resps in responses_by_resume.values())
+    total_responses = sum(
+        1 for r_list in responses.values()
+        for r in r_list
+        if r.get("status") == "success"
+    )
 
     return render_template(
         "customer.html",
