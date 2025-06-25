@@ -36,6 +36,8 @@ def find_vacancies(customer_id, text=None, area=None):
             applied_ids = {item["vacancy"]["id"] for item in items}
 
     collected = []
+    print(f"📡 [find_vacancies] Запрос к HH с параметрами: {params}")
+
     while len(collected) < 50:
         resp = requests.get("https://api.hh.ru/vacancies", headers=headers, params=params)
         if resp.status_code != 200:
