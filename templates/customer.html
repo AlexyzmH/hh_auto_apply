@@ -30,35 +30,10 @@
 <div class="mt-3 bg-gray-50 p-3 rounded border">
   <p class="font-semibold text-sm mb-2">📋 Отклики по этому резюме:</p>
   <div class="max-h-48 overflow-y-auto space-y-2 pr-2" id="responses-{{ resume.id }}">
-    {% if my_responses %}
-      {% for r in my_responses|reverse %}
-        <div class="border p-2 rounded bg-white shadow-sm">
-          {% if r.status %}
-            <p class="text-sm mt-1
-              {% if r.status == 'success' %}text-green-600
-              {% elif r.status == 'manual' %}text-yellow-600
-              {% else %}text-red-600
-              {% endif %}">
-              {% if r.status == 'success' %}✅ Успешно откликнулись
-              {% elif r.status == 'manual' %}🔀 Требуется ручной отклик
-              {% elif r.status == 'fail' %}❌ Не удалось откликнуться
-              {% endif %}
-            </p>
-          {% endif %}
-          <p class="text-sm text-gray-600">🏢 {{ r.company }} — 📍 {{ r.city }}</p>
-          <p class="text-sm text-gray-600">💰 {{ r.salary }}</p>
-          <p class="text-xs text-gray-400">🕒 {{ r.applied_at[:16]|replace("T", " ") }}</p>
-          <a href="{{ r.url }}" target="_blank" class="text-blue-600 hover:underline text-sm">🔗 Открыть на HH</a>
-        </div>
-      {% endfor %}
-    {% else %}
-      <p class="text-sm text-gray-500">Откликов пока нет</p>
-    {% endif %}
+
   </div>
 </div>
     </div>
-
-
 
     <div id="search-results" class="mt-6 space-y-4"></div>
 
@@ -380,6 +355,12 @@ async function stopBackgroundApply(customerId, resumeId) {
   console.log("🛑 Остановлен фоновый поиск:", data);
 }
 
+const sorted = data.responses.slice().sort((a, b) => {
+  // сначала success, потом manual, потом fail
+  const statusOrder = { success: 0, manual: 1, fail: 2 };
+  return statusOrder[a.status] - statusOrder[b.status];
+});
+
 function pollResponses(customerId, resumeId) {
   setInterval(async () => {
     const res = await fetch(`/responses/${customerId}/${resumeId}`);
@@ -390,10 +371,16 @@ function pollResponses(customerId, resumeId) {
 
     container.innerHTML = "";
 
-    for (const r of data.responses.reverse()) {
+    for (const r of sorted) {
       const card = document.createElement("div");
-      card.className = "border p-2 rounded bg-white shadow-sm";
+      const isSuccess = r.status === "success";
+
+      card.className = `border p-2 rounded shadow-sm ${
+      r.status === "success" ? "bg-green-100 border-green-400" : "bg-white"
+    }`;
+
       card.innerHTML = `
+        <p class="text-base font-bold text-blue-800">${r.name}</p>
         <p class="text-sm text-gray-600">🏢 ${r.company} — 📍 ${r.city}</p>
         <p class="text-sm text-gray-600">💰 ${r.salary}</p>
         <p class="text-xs text-gray-400">🕒 ${r.applied_at.slice(0, 16).replace("T", " ")}</p>
@@ -412,6 +399,7 @@ function pollResponses(customerId, resumeId) {
       `;
       container.prepend(card);
     }
+
   }, 2000); // каждые 2 секунд
 }
 
