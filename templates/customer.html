@@ -422,14 +422,19 @@ async function updateTotalSuccessfulResponses(customerId, resumeIds) {
 <script>
   document.addEventListener("DOMContentLoaded", async () => {
     const resumeIds = [{% for resume in resumes %}"{{ resume.id }}",{% endfor %}];
+
     updateTotalSuccessfulResponses("{{ customer_id }}", resumeIds);
 
-    // pollResponses по каждому резюме
+    setInterval(() => {
+      updateTotalSuccessfulResponses("{{ customer_id }}", resumeIds);
+    }, 2000); // каждые 2 сек
+
     {% for resume in resumes %}
       pollResponses("{{ customer_id }}", "{{ resume.id }}");
     {% endfor %}
   });
 </script>
+
 
 </body>
 </html>
