@@ -42,7 +42,7 @@ def get_responses(customer_id, resume_id):
         resume_responses = []
     return jsonify({"responses": resume_responses})
 
-def background_apply_loop(customer_id, resume_id, text=None, message=None):
+def background_apply_loop(customer_id, resume_id, text=None, message=None,area=None):
     print(f"🚀 Старт фонового автоотклика для {customer_id}, резюме {resume_id}")
 
     while True:
@@ -55,7 +55,7 @@ def background_apply_loop(customer_id, resume_id, text=None, message=None):
         print("🔁 Цикл отклика...")
         try:
             with app.test_request_context():
-                apply_for_customer_resume(customer_id, resume_id, text=text, message=message)
+                apply_for_customer_resume(customer_id, resume_id, text=text, message=message,area=area)
         except Exception as e:
             import traceback
             print(f"🔥 Ошибка в background_apply_loop: {e}")
@@ -94,7 +94,7 @@ def start_background_apply():
 
     print(f"🚀 Запускаем поток для {customer_id=}, {resume_id=}, {text=}, {message=}")
 
-    thread = Thread(target=background_apply_loop, args=(customer_id, resume_id, text, message))
+    thread = Thread(target=background_apply_loop, args=(customer_id, resume_id, text, message, area))
     thread.start()
     return jsonify({"status": "started"})
 

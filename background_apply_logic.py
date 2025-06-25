@@ -3,7 +3,7 @@
 from auth_utils import get_valid_access_token, load_auth_data
 from hh_logic import find_vacancies, respond_to_vacancy_internal
 
-def apply_for_customer_resume(customer_id, resume_id, text=None, message=None):
+def apply_for_customer_resume(customer_id, resume_id, text=None, message=None,area=None):
     print(f"📡 apply_for_customer_resume: {customer_id=} {resume_id=}")
     print(f"📝 text = '{text}', message длина = {len(message or '')}")
 
@@ -19,7 +19,7 @@ def apply_for_customer_resume(customer_id, resume_id, text=None, message=None):
         return
 
     print("🔍 Получаем вакансии...")
-    vacancies = find_vacancies(customer_id, text=text)
+    vacancies = find_vacancies(customer_id, text=text,area=area)
     print(f"📦 Найдено {len(vacancies)} вакансий")
 
     for v in vacancies:
