@@ -264,13 +264,17 @@ def customer_dashboard(customer_id):
         if r.get("status") == "success"
     )
 
+    tasks = load_tasks()
+    tasks_for_customer = tasks.get(customer_id, {})
+
     return render_template(
         "customer.html",
         customer_id=customer_id,
         resumes=resumes,
         username=customer.get("username"),
         responses=responses_by_resume,
-        total_responses = total_responses
+        total_responses = total_responses,
+        background_tasks=tasks_for_customer
     )
 
 

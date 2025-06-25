@@ -19,6 +19,12 @@
     <div>
       <p class="font-semibold">{{ resume.title }}</p>
       <p class="text-sm text-gray-600">ID: {{ resume.id }}</p>
+      {% set is_active = (background_tasks.get(resume.id, {}).get("active", False)) %}
+      <p id="resume-status-{{ resume.id }}" class="text-sm {{ 'text-green-600' if is_active else 'text-gray-400' }}">
+        {{ '🔄 Поиск ведётся' if is_active else '⏹ Поиск остановлен' }}
+      </p>
+
+
 
       {% set my_responses = responses.get(resume.id, []) %}
 <div class="mt-3 bg-gray-50 p-3 rounded border">
@@ -345,6 +351,13 @@ async function startBackgroundApply(customerId, resumeId) {
   console.log("🚀 Фоновый запуск: ", data);
   console.log("📥 Ответ от сервера:", data);
 
+  const statusP = document.querySelector(`#resume-status-${resumeId}`);
+  if (statusP) {
+    statusP.textContent = "🔄 Поиск ведётся";
+    statusP.className = "text-sm text-green-600 mt-2";
+  }
+
+
   // 🔁 запускаем обновление UI
   pollResponses(customerId, resumeId);
 }
@@ -355,6 +368,13 @@ async function stopBackgroundApply(customerId, resumeId) {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ customer_id: customerId, resume_id: resumeId })
   });
+
+  const statusP = document.querySelector(`#resume-status-${resumeId}`);
+  if (statusP) {
+    statusP.textContent = "🛑 Поиск остановлен";
+    statusP.className = "text-sm text-red-600 mt-2";
+  }
+
 
   const data = await res.json();
   console.log("🛑 Остановлен фоновый поиск:", data);
@@ -433,6 +453,23 @@ async function updateTotalSuccessfulResponses(customerId, resumeIds) {
       pollResponses("{{ customer_id }}", "{{ resume.id }}");
     {% endfor %}
   });
+
+    // установка стартовых индикаторов (поиск идёт / остановлен)
+  const backgroundTasks = {{ background_tasks | tojson }};
+  resumeIds.forEach(resumeId => {
+    const task = backgroundTasks[resumeId];
+    const statusP = document.querySelector(`#resume-status-${resumeId}`);
+    if (statusP) {
+      if (task && task.active) {
+        statusP.textContent = "🔄 Поиск ведётся";
+        statusP.className = "text-sm text-green-600 mt-2";
+      } else {
+        statusP.textContent = "⏹ Поиск остановлен";
+        statusP.className = "text-sm text-gray-400 mt-2";
+      }
+    }
+  });
+
 </script>
 
 
