@@ -123,9 +123,6 @@
   </div>
 </div>
 
-</body>
-</html>
-
 <script>
   const customerId = "{{ customer_id }}";
 let stopAuto = false;
@@ -283,19 +280,6 @@ async function startSearchAndApply(customerId, resumeId, areaId) {
 
 </script>
 
-<script>
-  document.addEventListener("DOMContentLoaded", async () => {
-    const resumeIds = [{% for resume in resumes %}"{{ resume.id }}",{% endfor %}];
-    updateTotalSuccessfulResponses("{{ customer_id }}", resumeIds);
-
-    // pollResponses по каждому резюме
-    {% for resume in resumes %}
-      pollResponses("{{ customer_id }}", "{{ resume.id }}");
-    {% endfor %}
-  });
-</script>
-
-
 
 <script>
 let searchSettingsByResume = {};  // ключ: resumeId, значение: {text}
@@ -411,6 +395,8 @@ function pollResponses(customerId, resumeId) {
   }, 2000); // каждые 2 секунд
 }
 
+</script>
+
 <script>
 async function updateTotalSuccessfulResponses(customerId, resumeIds) {
   let total = 0;
@@ -432,6 +418,22 @@ async function updateTotalSuccessfulResponses(customerId, resumeIds) {
   }
 }
 </script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", async () => {
+    const resumeIds = [{% for resume in resumes %}"{{ resume.id }}",{% endfor %}];
+    updateTotalSuccessfulResponses("{{ customer_id }}", resumeIds);
+
+    // pollResponses по каждому резюме
+    {% for resume in resumes %}
+      pollResponses("{{ customer_id }}", "{{ resume.id }}");
+    {% endfor %}
+  });
+</script>
+
+</body>
+</html>
+
 
 
 
