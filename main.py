@@ -81,6 +81,7 @@ def start_background_apply():
     resume_id = data.get("resume_id")
     text = data.get("text")
     message = data.get("message")
+    area = data.get("area")
 
     if not customer_id or not resume_id:
         return "Missing customer_id or resume_id", 400
