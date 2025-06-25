@@ -269,6 +269,12 @@ async function openSearchSettings(resumeId, title, areaName) {
   document.getElementById("search-text").value = searchSettingsByResume[resumeId]?.text || title;
   document.getElementById("search-area-name").value = areaName || "Не указан";
 
+  searchSettingsByResume[resumeId] = {
+  text: document.getElementById("search-text").value.trim(),
+  area: areaName || "",
+  message: "" // потом загрузится отдельно
+};
+
   try {
     const res = await fetch(`/cover_letter/${customerId}/${resumeId}`);
     const data = await res.json();
@@ -291,11 +297,14 @@ function saveSearchSettings() {
   const resumeId = document.getElementById("search-settings-modal").dataset.resumeId;
   const text = document.getElementById("search-text").value.trim();
   const coverLetter = document.getElementById("cover-letter-text").value.trim();
+  const area = document.getElementById("search-area-name").value.trim();
 
   searchSettingsByResume[resumeId] = {
-    text,
-    message: coverLetter
-  };
+  text,
+  area,
+  message: coverLetter
+};
+
 
   fetch(`/save_cover_letter/${customerId}/${resumeId}`, {
     method: "POST",
