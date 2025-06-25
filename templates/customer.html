@@ -284,12 +284,17 @@ async function startSearchAndApply(customerId, resumeId, areaId) {
 </script>
 
 <script>
-  document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("DOMContentLoaded", async () => {
+    const resumeIds = [{% for resume in resumes %}"{{ resume.id }}",{% endfor %}];
+    updateTotalSuccessfulResponses("{{ customer_id }}", resumeIds);
+
+    // pollResponses по каждому резюме
     {% for resume in resumes %}
       pollResponses("{{ customer_id }}", "{{ resume.id }}");
     {% endfor %}
   });
 </script>
+
 
 
 <script>
@@ -376,8 +381,6 @@ function pollResponses(customerId, resumeId) {
     const res = await fetch(`/responses/${customerId}/${resumeId}`);
     const data = await res.json();
 
-    // ⏱️ Обновление счётчика успешных откликов
-    const counter = document.querySelector("p.text-sm.text-gray-600.mb-4");
     if (counter) {
       const successfulOnly = (data.responses || []).filter(r => r.status === "success");
       const current = parseInt(counter.textContent.match(/\d+/)?.[0] || "0", 10);
@@ -417,6 +420,27 @@ function pollResponses(customerId, resumeId) {
   }, 2000); // каждые 2 секунд
 }
 
+<script>
+async function updateTotalSuccessfulResponses(customerId, resumeIds) {
+  let total = 0;
+
+  for (const resumeId of resumeIds) {
+    try {
+      const res = await fetch(`/responses/${customerId}/${resumeId}`);
+      const data = await res.json();
+      const successful = (data.responses || []).filter(r => r.status === "success").length;
+      total += successful;
+    } catch (e) {
+      console.warn(`⚠️ Не удалось получить отклики для резюме ${resumeId}`, e);
+    }
+  }
+
+  const counter = document.querySelector("p.text-sm.text-gray-600.mb-4");
+  if (counter) {
+    counter.textContent = `🔢 Всего успешных откликов: ${total}`;
+  }
+}
+</script>
 
 
 </script>
