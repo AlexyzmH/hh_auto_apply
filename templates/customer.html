@@ -381,15 +381,6 @@ function pollResponses(customerId, resumeId) {
     const res = await fetch(`/responses/${customerId}/${resumeId}`);
     const data = await res.json();
 
-    if (counter) {
-      const successfulOnly = (data.responses || []).filter(r => r.status === "success");
-      const current = parseInt(counter.textContent.match(/\d+/)?.[0] || "0", 10);
-      const newCount = successfulOnly.length;
-      if (newCount !== current) {
-        counter.textContent = `🔢 Всего успешных откликов: ${newCount}`;
-      }
-    }
-
     const container = document.getElementById(`responses-${resumeId}`);
     if (!container) return;
 
