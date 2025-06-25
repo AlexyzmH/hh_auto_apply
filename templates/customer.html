@@ -8,7 +8,7 @@
 <body class="bg-gray-100 text-gray-900 font-sans">
   <div class="container mx-auto p-6">
     <h1 class="text-2xl font-bold mb-1">👤 Клиент: {{ username or customer_id }}</h1>
-    <p class="text-sm text-gray-600 mb-4">🔢 Всего откликов: {{ total_responses }}</p>
+    <p class="text-sm text-gray-600 mb-4">🔢 Всего успешных откликов: {{ total_responses }}</p>
 
     {% if resumes %}
       <h2 class="text-xl mb-2">Выберите резюме:</h2>
@@ -284,6 +284,15 @@ async function startSearchAndApply(customerId, resumeId, areaId) {
 </script>
 
 <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    {% for resume in resumes %}
+      pollResponses("{{ customer_id }}", "{{ resume.id }}");
+    {% endfor %}
+  });
+</script>
+
+
+<script>
 let searchSettingsByResume = {};  // ключ: resumeId, значение: {text}
 
 async function openSearchSettings(resumeId, title, areaName) {
@@ -366,6 +375,18 @@ function pollResponses(customerId, resumeId) {
   setInterval(async () => {
     const res = await fetch(`/responses/${customerId}/${resumeId}`);
     const data = await res.json();
+
+    // ⏱️ Обновление счётчика успешных откликов
+    const counter = document.querySelector("p.text-sm.text-gray-600.mb-4");
+    if (counter) {
+      const successfulOnly = (data.responses || []).filter(r => r.status === "success");
+      const current = parseInt(counter.textContent.match(/\d+/)?.[0] || "0", 10);
+      const newCount = successfulOnly.length;
+      if (newCount !== current) {
+        counter.textContent = `🔢 Всего успешных откликов: ${newCount}`;
+      }
+    }
+
     const container = document.getElementById(`responses-${resumeId}`);
     if (!container) return;
 
@@ -393,8 +414,9 @@ function pollResponses(customerId, resumeId) {
       `;
       container.prepend(card);
     }
-  }, 10000); // каждые 10 секунд
+  }, 2000); // каждые 2 секунд
 }
+
 
 
 </script>
