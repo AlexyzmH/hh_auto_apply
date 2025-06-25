@@ -359,7 +359,11 @@ async function stopBackgroundApply(customerId, resumeId) {
 function pollResponses(customerId, resumeId) {
   setInterval(async () => {
     const res = await fetch(`/responses/${customerId}/${resumeId}`);
+
+
     const data = await res.json();
+
+    console.log("💡 Статусы до сортировки:", data.responses.map(r => r.status));
 
     const sorted = data.responses.slice().sort((a, b) => {
       // сначала success, потом manual, потом fail
@@ -368,6 +372,8 @@ function pollResponses(customerId, resumeId) {
     });
     const container = document.getElementById(`responses-${resumeId}`);
     if (!container) return;
+
+    console.log("📊 Сортировка:", sorted.map(r => r.status + " → " + r.name));
 
     container.innerHTML = "";
 
