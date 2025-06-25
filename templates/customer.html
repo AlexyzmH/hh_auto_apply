@@ -355,17 +355,17 @@ async function stopBackgroundApply(customerId, resumeId) {
   console.log("🛑 Остановлен фоновый поиск:", data);
 }
 
-const sorted = data.responses.slice().sort((a, b) => {
-  // сначала success, потом manual, потом fail
-  const statusOrder = { success: 0, manual: 1, fail: 2 };
-  return statusOrder[a.status] - statusOrder[b.status];
-});
 
 function pollResponses(customerId, resumeId) {
   setInterval(async () => {
     const res = await fetch(`/responses/${customerId}/${resumeId}`);
     const data = await res.json();
 
+    const sorted = data.responses.slice().sort((a, b) => {
+      // сначала success, потом manual, потом fail
+      const statusOrder = { success: 0, manual: 1, fail: 2 };
+      return statusOrder[a.status] - statusOrder[b.status];
+    });
     const container = document.getElementById(`responses-${resumeId}`);
     if (!container) return;
 
@@ -440,8 +440,6 @@ async function updateTotalSuccessfulResponses(customerId, resumeIds) {
     {% for resume in resumes %}
       pollResponses("{{ customer_id }}", "{{ resume.id }}");
     {% endfor %}
-  });
-
     // установка стартовых индикаторов (поиск идёт / остановлен)
   const backgroundTasks = {{ background_tasks | tojson }};
   resumeIds.forEach(resumeId => {
@@ -457,6 +455,8 @@ async function updateTotalSuccessfulResponses(customerId, resumeIds) {
       }
     }
   });
+ });
+
 
 </script>
 
