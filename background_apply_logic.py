@@ -9,6 +9,8 @@ from pathlib import Path
 TASKS_FILE = Path("background_tasks.json")
 
 def apply_for_customer_resume(customer_id, resume_id, text=None, message=None,area=None):
+    print(f"🧪 DEBUG: apply_for_customer_resume получил text={text!r}, area={area!r}")
+
     # Проверка перед запуском
     try:
         tasks = json.loads(TASKS_FILE.read_text(encoding="utf-8"))
