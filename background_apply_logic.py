@@ -3,8 +3,22 @@ from time import sleep
 
 from auth_utils import get_valid_access_token, load_auth_data
 from hh_logic import find_vacancies, respond_to_vacancy_internal
+import json
+from pathlib import Path
+
+TASKS_FILE = Path("background_tasks.json")
 
 def apply_for_customer_resume(customer_id, resume_id, text=None, message=None,area=None):
+    # Проверка перед запуском
+    try:
+        tasks = json.loads(TASKS_FILE.read_text(encoding="utf-8"))
+        if not tasks.get(customer_id, {}).get(resume_id, {}).get("active", False):
+            print("🛑 Задача неактивна, выход из apply_for_customer_resume")
+            return
+    except Exception as e:
+        print("⚠️ Ошибка при проверке активности задачи:", e)
+
+
     print(f"📡 apply_for_customer_resume: {customer_id=} {resume_id=}")
     print(f"📝 text = '{text}', message длина = {len(message or '')}")
 
@@ -26,6 +40,14 @@ def apply_for_customer_resume(customer_id, resume_id, text=None, message=None,ar
     print(f"📦 Найдено {len(vacancies)} вакансий")
 
     for v in vacancies:
+        # ⛔ Проверка, активна ли задача — если нет, прерываем цикл
+        try:
+            tasks = json.loads(TASKS_FILE.read_text(encoding="utf-8"))
+            if not tasks.get(customer_id, {}).get(resume_id, {}).get("active", False):
+                print("🛑 Отклик остановлен во время цикла вакансий")
+                break
+        except Exception as e:
+            print("⚠️ Ошибка при проверке задач:", e)
         vacancy_id = v["id"]
         try:
             result = respond_to_vacancy_internal(customer_id, resume_id, vacancy_id, message=message)
