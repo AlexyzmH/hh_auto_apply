@@ -353,61 +353,69 @@ async function stopBackgroundApply(customerId, resumeId) {
 
   const data = await res.json();
   console.log("🛑 Остановлен фоновый поиск:", data);
+
+  if (pollIntervals[resumeId]) {
+  clearInterval(pollIntervals[resumeId]);
+  delete pollIntervals[resumeId];
 }
 
+}
+
+
+const pollIntervals = {}; // resumeId → intervalId
 
 function pollResponses(customerId, resumeId) {
-  setInterval(async () => {
-    const res = await fetch(`/responses/${customerId}/${resumeId}`);
+  if (pollIntervals[resumeId]) return; // уже запущено
 
+  pollIntervals[resumeId] = setInterval(async () => {
+    try {
+      const res = await fetch(`/responses/${customerId}/${resumeId}`);
+      const data = await res.json();
 
-    const data = await res.json();
+      const sorted = data.responses.slice().sort((a, b) => {
+        const statusOrder = { success: 0, manual: 1, fail: 2 };
+        return (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3);
+      });
 
-    console.log("💡 Статусы до сортировки:", data.responses.map(r => r.status));
+      const container = document.getElementById(`responses-${resumeId}`);
+      if (!container) return;
 
-    const sorted = data.responses.slice().sort((a, b) => {
-      // сначала success, потом manual, потом fail
-      const statusOrder = { success: 0, manual: 1, fail: 2 };
-      return statusOrder[a.status] - statusOrder[b.status];
-    });
-    const container = document.getElementById(`responses-${resumeId}`);
-    if (!container) return;
+      container.innerHTML = "";
 
-    console.log("📊 Сортировка:", sorted.map(r => r.status + " → " + r.name));
+      for (const r of sorted) {
+        const card = document.createElement("div");
+        const isSuccess = r.status === "success";
 
-    container.innerHTML = "";
+        card.className = `border p-2 rounded shadow-sm ${
+          isSuccess ? "bg-green-100 border-green-400" : "bg-white"
+        }`;
 
-    for (const r of sorted) {
-      const card = document.createElement("div");
-      const isSuccess = r.status === "success";
-
-      card.className = `border p-2 rounded shadow-sm ${
-      r.status === "success" ? "bg-green-100 border-green-400" : "bg-white"
-    }`;
-
-      card.innerHTML = `
-        <p class="text-base font-bold text-blue-800">${r.name}</p>
-        <p class="text-sm text-gray-600">🏢 ${r.company} — 📍 ${r.city}</p>
-        <p class="text-sm text-gray-600">💰 ${r.salary}</p>
-        <p class="text-xs text-gray-400">🕒 ${r.applied_at.slice(0, 16).replace("T", " ")}</p>
-        <a href="${r.url}" target="_blank" class="text-blue-600 hover:underline text-sm">🔗 Открыть на HH</a>
-        <p class="mt-1 text-sm ${
-          r.status === "success" ? "text-green-600" :
-          r.status === "manual" ? "text-yellow-600" :
-          "text-red-600"
-        }">
-          ${
-            r.status === "success" ? "✅ Успешно откликнулись" :
-            r.status === "manual" ? "🔀 Требуется ручной отклик" :
-            "❌ Не удалось откликнуться"
-          }
-        </p>
-      `;
-      container.appendChild(card);
+        card.innerHTML = `
+          <p class="text-base font-bold text-blue-800">${r.name}</p>
+          <p class="text-sm text-gray-600">🏢 ${r.company} — 📍 ${r.city}</p>
+          <p class="text-sm text-gray-600">💰 ${r.salary}</p>
+          <p class="text-xs text-gray-400">🕒 ${r.applied_at.slice(0, 16).replace("T", " ")}</p>
+          <a href="${r.url}" target="_blank" class="text-blue-600 hover:underline text-sm">🔗 Открыть на HH</a>
+          <p class="mt-1 text-sm ${
+            r.status === "success" ? "text-green-600" :
+            r.status === "manual" ? "text-yellow-600" :
+            "text-red-600"
+          }">
+            ${
+              r.status === "success" ? "✅ Успешно откликнулись" :
+              r.status === "manual" ? "🔀 Требуется ручной отклик" :
+              "❌ Не удалось откликнуться"
+            }
+          </p>
+        `;
+        container.appendChild(card);
+      }
+    } catch (e) {
+      console.warn("❌ Ошибка при опросе откликов:", e);
     }
-
-  }, 2000); // каждые 2 секунд
+  }, 2000);
 }
+
 
 </script>
 
