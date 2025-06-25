@@ -1,4 +1,5 @@
 # background_apply_logic.py
+from time import sleep
 
 from auth_utils import get_valid_access_token, load_auth_data
 from hh_logic import find_vacancies, respond_to_vacancy_internal
@@ -6,6 +7,8 @@ from hh_logic import find_vacancies, respond_to_vacancy_internal
 def apply_for_customer_resume(customer_id, resume_id, text=None, message=None,area=None):
     print(f"📡 apply_for_customer_resume: {customer_id=} {resume_id=}")
     print(f"📝 text = '{text}', message длина = {len(message or '')}")
+
+    sleep(5)
 
     auth_data = load_auth_data()
     customer = auth_data.get(customer_id)
