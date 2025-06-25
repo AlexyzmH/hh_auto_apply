@@ -7,9 +7,14 @@ import json
 from pathlib import Path
 
 TASKS_FILE = Path("background_tasks.json")
+AREA_MAP_PATH = Path("area_map.json")
+AREA_MAP = json.loads(AREA_MAP_PATH.read_text(encoding="utf-8")) if AREA_MAP_PATH.exists() else {}
+
 
 def apply_for_customer_resume(customer_id, resume_id, text=None, message=None,area=None):
+    hh_area_id = AREA_MAP.get(area.strip()) if area else None
     print(f"🧪 DEBUG: apply_for_customer_resume получил text={text!r}, area={area!r}")
+
 
     # Проверка перед запуском
     try:
@@ -38,7 +43,7 @@ def apply_for_customer_resume(customer_id, resume_id, text=None, message=None,ar
         return
 
     print("🔍 Получаем вакансии...")
-    vacancies = find_vacancies(customer_id, text=text,area=area)
+    vacancies = find_vacancies(customer_id, text=text,area=hh_area_id)
     print(f"📦 Найдено {len(vacancies)} вакансий")
 
     for v in vacancies:
