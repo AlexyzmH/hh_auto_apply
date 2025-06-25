@@ -7,9 +7,13 @@ import json
 from pathlib import Path
 
 TASKS_FILE = Path("background_tasks.json")
+# Загружаем карту городов
 AREA_MAP_PATH = Path("area_map.json")
-AREA_MAP = json.loads(AREA_MAP_PATH.read_text(encoding="utf-8")) if AREA_MAP_PATH.exists() else {}
-
+try:
+    AREA_MAP = json.loads(AREA_MAP_PATH.read_text(encoding="utf-8"))
+except Exception as e:
+    print("❌ Ошибка чтения area_map.json:", e)
+    AREA_MAP = {}
 
 def apply_for_customer_resume(customer_id, resume_id, text=None, message=None,area=None):
     hh_area_id = AREA_MAP.get(area.strip()) if area else None
