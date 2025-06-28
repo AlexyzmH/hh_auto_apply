@@ -266,27 +266,36 @@ async function startSearchAndApply(customerId, resumeId, areaId) {
 let searchSettingsByResume = {};  // ключ: resumeId, значение: {text}
 
 async function openSearchSettings(resumeId, title, areaName) {
-  document.getElementById("search-text").value = searchSettingsByResume[resumeId]?.text || title;
-  document.getElementById("search-area-name").value = areaName || "Не указан";
-
-  searchSettingsByResume[resumeId] = {
-  text: document.getElementById("search-text").value.trim(),
-  area: areaName || "",
-  message: "" // потом загрузится отдельно
-};
+  const modal = document.getElementById("search-settings-modal");
+  const areaInput = document.getElementById("search-area-name");
+  const textInput = document.getElementById("search-text");
+  const messageInput = document.getElementById("cover-letter-text");
 
   try {
     const res = await fetch(`/cover_letter/${customerId}/${resumeId}`);
     const data = await res.json();
-    document.getElementById("cover-letter-text").value = data.message || "";
+
+    // ⬇️ Заполняем все значения из ответа
+    searchSettingsByResume[resumeId] = {
+      text: data.text || title,
+      area: data.area || areaName || "",
+      message: data.message || ""
+    };
+
+    textInput.value = searchSettingsByResume[resumeId].text;
+    areaInput.value = searchSettingsByResume[resumeId].area;
+    messageInput.value = searchSettingsByResume[resumeId].message;
   } catch (e) {
-    console.warn("❗ Не удалось загрузить сопроводительное:", e);
-    document.getElementById("cover-letter-text").value = "";
+    console.warn("❗ Не удалось загрузить настройки:", e);
+    textInput.value = title;
+    areaInput.value = areaName || "";
+    messageInput.value = "";
   }
 
-  document.getElementById("search-settings-modal").dataset.resumeId = resumeId;
-  document.getElementById("search-settings-modal").classList.remove("hidden");
+  modal.dataset.resumeId = resumeId;
+  modal.classList.remove("hidden");
 }
+
 
 
 function closeSearchSettings() {
