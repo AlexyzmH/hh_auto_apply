@@ -74,6 +74,7 @@ def index():
 
 @app.route("/start_background_apply", methods=["POST"])
 def start_background_apply():
+    print("🔥 Вызван /start_background_apply")
     data = request.get_json()
     print(f"📩 Получен запрос на старт: {data}")
     customer_id = data.get("customer_id")
