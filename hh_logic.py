@@ -27,13 +27,22 @@ def find_vacancies(customer_id, text=None, area=None):
         params["area"] = area
 
     resume_id = customer.get("selected_resume_id")
-    applied_ids = set()
+    applied_ids = set()  # ← сначала объявляем
 
+    # Учитываем локальные отклики из responses.json
+    if RESPONSES_FILE.exists():
+        all_data = json.loads(RESPONSES_FILE.read_text(encoding="utf-8"))
+        customer_block = all_data.get(customer_id, {})
+        resume_block = customer_block.get(resume_id, [])
+        for entry in resume_block:
+            applied_ids.add(entry["vacancy_id"])
+
+    # Добавляем отклики из HH API
     if resume_id:
         resp = requests.get(f"https://api.hh.ru/resume/{resume_id}/negotiations", headers=headers)
         if resp.status_code == 200:
             items = resp.json().get("items", [])
-            applied_ids = {item["vacancy"]["id"] for item in items}
+            applied_ids.update(item["vacancy"]["id"] for item in items)
 
     collected = []
     print(f"📡 [find_vacancies] Запрос к HH с параметрами: {params}")
@@ -54,6 +63,7 @@ def find_vacancies(customer_id, text=None, area=None):
         params["page"] += 1
 
     return collected[:50]
+
 
 
 from datetime import datetime
@@ -86,21 +96,18 @@ def respond_to_vacancy_internal(customer_id, resume_id, vacancy_id, message=None
         "HH-User-Agent": "SmartApply/1.0"
     }
 
-    # Получаем вакансию
     vacancy_resp = requests.get(f"https://api.hh.ru/vacancies/{vacancy_id}", headers=headers)
     if vacancy_resp.status_code != 200:
         return {"status": "fail", "message": "Не удалось получить вакансию"}
 
     vacancy = vacancy_resp.json()
 
-    # Проверка на подходящее резюме
     suitable_resp = requests.get(vacancy.get("suitable_resumes_url"), headers=headers)
     suitable_ids = [r["id"] for r in suitable_resp.json().get("items", [])]
 
     if resume_id not in suitable_ids:
         return {"status": "fail", "message": "Резюме не подходит"}
 
-    # Обработка сопроводительного
     if not message:
         if COVER_LETTERS_FILE.exists():
             all_letters = json.loads(COVER_LETTERS_FILE.read_text(encoding="utf-8"))
@@ -118,16 +125,17 @@ def respond_to_vacancy_internal(customer_id, resume_id, vacancy_id, message=None
 
     if apply_resp.status_code == 201:
         status = "success"
+        reason = ""
     elif apply_resp.status_code == 303:
         status = "manual"
+        reason = ""
     else:
         try:
             reason = apply_resp.json().get("description", "Неизвестная ошибка")
         except Exception:
             reason = "Неизвестная ошибка"
-        return {"status": "fail", "message": reason}
+        status = "fail"
 
-    # Лог отклика
     response_entry = {
         "vacancy_id": vacancy_id,
         "name": vacancy.get("name"),
@@ -152,4 +160,5 @@ def respond_to_vacancy_internal(customer_id, resume_id, vacancy_id, message=None
         all_data[customer_id] = customer_block
         RESPONSES_FILE.write_text(json.dumps(all_data, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    return {"status": status, "entry": response_entry}
+    return {"status": status, "entry": response_entry if status != "fail" else None, "message": reason}
+
