@@ -120,16 +120,20 @@ def get_cover_letter(customer_id, resume_id):
     if path.exists():
         with path.open("r", encoding="utf-8") as f:
             data = json.load(f)
-        text = data.get(customer_id, {}).get(resume_id, "")
+        block = data.get(customer_id, {}).get(resume_id, {})
+        return jsonify({
+            "text": block.get("text", ""),
+            "area": block.get("area", ""),
+            "message": block.get("message", "")
+        })
     else:
-        text = ""
+        return jsonify({"text": "", "area": "", "message": ""})
 
-    return jsonify({"text": text})
 
 
 @app.route("/save_cover_letter/<customer_id>/<resume_id>", methods=["POST"])
 def save_cover_letter(customer_id, resume_id):
-    text = request.json.get("text", "")
+    payload = request.json
     path = Path("cover_letters.json")
 
     if path.exists():
@@ -138,12 +142,18 @@ def save_cover_letter(customer_id, resume_id):
     else:
         data = {}
 
-    data.setdefault(customer_id, {})[resume_id] = text
+    customer_data = data.setdefault(customer_id, {})
+    customer_data[resume_id] = {
+        "text": payload.get("text", ""),
+        "area": payload.get("area", ""),
+        "message": payload.get("message", "")
+    }
 
     with path.open("w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
     return jsonify({"status": "ok"})
+
 
 
 

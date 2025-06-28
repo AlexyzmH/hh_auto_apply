@@ -307,10 +307,15 @@ function saveSearchSettings() {
 
 
   fetch(`/save_cover_letter/${customerId}/${resumeId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: coverLetter })
-  });
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    text,
+    area,
+    message: coverLetter
+  })
+});
+
 
   closeSearchSettings();
 
