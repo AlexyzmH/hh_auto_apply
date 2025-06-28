@@ -318,7 +318,7 @@ def get_vacancies():
     if search_fields:
         params["search_field"] = search_fields[0]
 
-    per_page = 50
+    per_page = 3
     target_results = 50
     page = 0
     collected = []

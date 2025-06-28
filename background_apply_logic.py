@@ -32,7 +32,7 @@ def apply_for_customer_resume(customer_id, resume_id, text=None, message=None,ar
     print(f"📡 apply_for_customer_resume: {customer_id=} {resume_id=}")
     print(f"📝 text = '{text}', message длина = {len(message or '')}")
 
-    sleep(5)
+    sleep(10)
 
     auth_data = load_auth_data()
     customer = auth_data.get(customer_id)
