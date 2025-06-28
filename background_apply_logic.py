@@ -48,8 +48,7 @@ def apply_for_customer_resume(customer_id, resume_id, text=None, message=None,ar
 
     print(f"📦 Найдено {len(vacancies)} вакансий")
 
-    max_responses = 3  # Ограничим отклики
-    vacancies = vacancies[:max_responses]
+    vacancies = vacancies
 
     for v in vacancies:
         # ⛔ Проверка, активна ли задача — если нет, прерываем цикл
