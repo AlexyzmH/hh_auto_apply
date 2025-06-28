@@ -331,9 +331,30 @@ function saveSearchSettings() {
 }
 
 async function startBackgroundApply(customerId, resumeId) {
+  // 🔍 Загружаем настройки, если их нет в кеше
+  if (!searchSettingsByResume[resumeId]) {
+    try {
+      const res = await fetch(`/cover_letter/${customerId}/${resumeId}`);
+      const data = await res.json();
+      searchSettingsByResume[resumeId] = {
+        text: data.text || '',
+        area: data.area || '',
+        message: data.message || ''
+      };
+    } catch (err) {
+      console.warn("❌ Не удалось загрузить cover_letter:", err);
+      searchSettingsByResume[resumeId] = {
+        text: '',
+        area: '',
+        message: ''
+      };
+    }
+  }
+
   const settings = searchSettingsByResume[resumeId] || {};
 
   console.log("📡 Отправляем запрос на /start_background_apply");
+
   const res = await fetch("/start_background_apply", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
