@@ -363,8 +363,6 @@ def get_vacancies():
     return jsonify({"items": collected[:target_results]})
 
 
-
-
 @app.route("/delete/<customer_id>", methods=["POST"])
 def delete_customer(customer_id):
     data = load_auth_data()
