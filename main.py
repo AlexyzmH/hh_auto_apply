@@ -293,8 +293,7 @@ def search():
     customer_id = request.args.get("customer_id")
     return render_template("search.html", customer_id=customer_id)
 
-
-@app.route("/vacancies")
+'''@app.route("/vacancies")
 def get_vacancies():
     from auth_utils import load_auth_data
     customer_id = request.args.get("customer_id")
@@ -328,7 +327,7 @@ def get_vacancies():
     if search_fields:
         params["search_field"] = search_fields[0]
 
-    per_page = 3
+    per_page = 50
     target_results = 50
     page = 0
     collected = []
@@ -371,6 +370,7 @@ def get_vacancies():
         page += 1
 
     return jsonify({"items": collected[:target_results]})
+    '''#FOR search.html
 
 
 @app.route("/delete/<customer_id>", methods=["POST"])

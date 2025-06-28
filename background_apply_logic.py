@@ -32,8 +32,6 @@ def apply_for_customer_resume(customer_id, resume_id, text=None, message=None,ar
     print(f"📡 apply_for_customer_resume: {customer_id=} {resume_id=}")
     print(f"📝 text = '{text}', message длина = {len(message or '')}")
 
-    sleep(10)
-
     auth_data = load_auth_data()
     customer = auth_data.get(customer_id)
     if not customer:
@@ -47,7 +45,11 @@ def apply_for_customer_resume(customer_id, resume_id, text=None, message=None,ar
 
     print("🔍 Получаем вакансии...")
     vacancies = find_vacancies(customer_id, text=text,area=hh_area_id)
+
     print(f"📦 Найдено {len(vacancies)} вакансий")
+
+    max_responses = 3  # Ограничим отклики
+    vacancies = vacancies[:max_responses]
 
     for v in vacancies:
         # ⛔ Проверка, активна ли задача — если нет, прерываем цикл
@@ -61,6 +63,9 @@ def apply_for_customer_resume(customer_id, resume_id, text=None, message=None,ar
         vacancy_id = v["id"]
         try:
             result = respond_to_vacancy_internal(customer_id, resume_id, vacancy_id, message=message)
+
+            sleep(3)#cспим
+
             print(f"📨 Отклик на {vacancy_id} → {result['status']} — {result.get('message', '')}")
         except Exception as e:
             print(f"❌ Ошибка при отклике на {vacancy_id}:", e)
