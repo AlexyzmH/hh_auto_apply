@@ -278,7 +278,7 @@ async function openSearchSettings(resumeId, title, areaName) {
   try {
     const res = await fetch(`/cover_letter/${customerId}/${resumeId}`);
     const data = await res.json();
-    document.getElementById("cover-letter-text").value = data.text || "";
+    document.getElementById("cover-letter-text").value = data.message || "";
   } catch (e) {
     console.warn("❗ Не удалось загрузить сопроводительное:", e);
     document.getElementById("cover-letter-text").value = "";
