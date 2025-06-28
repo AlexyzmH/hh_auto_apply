@@ -121,6 +121,14 @@ def get_cover_letter(customer_id, resume_id):
         with path.open("r", encoding="utf-8") as f:
             data = json.load(f)
         block = data.get(customer_id, {}).get(resume_id, {})
+
+        if isinstance(block, str):
+            return jsonify({
+                "text": "",
+                "area": "",
+                "message": block
+            })
+
         return jsonify({
             "text": block.get("text", ""),
             "area": block.get("area", ""),
