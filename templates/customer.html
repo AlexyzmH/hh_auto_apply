@@ -331,29 +331,32 @@ function saveSearchSettings() {
 }
 
 async function startBackgroundApply(customerId, resumeId) {
-  // 🔍 Загружаем настройки, если их нет в кеше
-  if (!searchSettingsByResume[resumeId]) {
-    try {
-      const res = await fetch(`/cover_letter/${customerId}/${resumeId}`);
-      const data = await res.json();
-      searchSettingsByResume[resumeId] = {
-        text: data.text || '',
-        area: data.area || '',
-        message: data.message || ''
-      };
-    } catch (err) {
-      console.warn("❌ Не удалось загрузить cover_letter:", err);
-      searchSettingsByResume[resumeId] = {
-        text: '',
-        area: '',
-        message: ''
-      };
-    }
+  console.log("📡 Запуск startBackgroundApply для", resumeId);
+
+  // ⏳ Явно загружаем настройки с бэка
+  let settings;
+  try {
+    const res = await fetch(`/cover_letter/${customerId}/${resumeId}`);
+    const data = await res.json();
+
+    settings = {
+      text: data.text || '',
+      area: data.area || '',
+      message: data.message || ''
+    };
+
+    // Обновим кэш тоже
+    searchSettingsByResume[resumeId] = settings;
+
+    console.log("📦 Настройки загружены:", settings);
+  } catch (err) {
+    console.error("❌ Не удалось получить настройки:", err);
+    settings = {
+      text: '',
+      area: '',
+      message: ''
+    };
   }
-
-  const settings = searchSettingsByResume[resumeId] || {};
-
-  console.log("📡 Отправляем запрос на /start_background_apply");
 
   const res = await fetch("/start_background_apply", {
     method: "POST",
@@ -361,15 +364,14 @@ async function startBackgroundApply(customerId, resumeId) {
     body: JSON.stringify({
       customer_id: customerId,
       resume_id: resumeId,
-      text: settings.text || "",
-      message: settings.message || "",
-      area: settings.area || ""
+      text: settings.text,
+      area: settings.area,
+      message: settings.message
     })
   });
 
   const data = await res.json();
   console.log("🚀 Фоновый запуск: ", data);
-  console.log("📥 Ответ от сервера:", data);
 
   const statusP = document.querySelector(`#resume-status-${resumeId}`);
   if (statusP) {
@@ -377,10 +379,9 @@ async function startBackgroundApply(customerId, resumeId) {
     statusP.className = "text-sm text-green-600 mt-2";
   }
 
-
-  // 🔁 запускаем обновление UI
   pollResponses(customerId, resumeId);
 }
+
 
 async function stopBackgroundApply(customerId, resumeId) {
   const res = await fetch("/stop_background_apply", {
